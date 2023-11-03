@@ -64,16 +64,34 @@ def calc_curr_selection(event, old_selection, y_start, col_names):
 
 
 def df_assign_colors(
-    df, color_assigned_wrt_col_name, color_col_name, remove_colors=False
+    df,
+    psets_color_and_alluvial_position,
+    selected_partition_col_name,
+    color_col_name,
+    remove_colors=False,
 ):
     if remove_colors:
         df.loc[:, color_col_name] = "gray"
     else:
-        unique_vals = get_unique_vals(df, color_assigned_wrt_col_name)
-        colors = color_palette(min(len(unique_vals), 256))
+        unique_vals = get_unique_vals(df, selected_partition_col_name)
+        print(psets_color_and_alluvial_position)
+        for unique_val in unique_vals:
+            print(
+                psets_color_and_alluvial_position[
+                    (selected_partition_col_name, unique_val)
+                ]
+            )
+        # colors = color_palette(min(len(unique_vals), 256))
+        # df[color_col_name] = df.apply(
+        #     lambda row: colors[
+        #         unique_vals.index(row[selected_partition_col_name]) % 256
+        #     ],
+        #     axis=1,
+        # )
+
         df[color_col_name] = df.apply(
-            lambda row: colors[
-                unique_vals.index(row[color_assigned_wrt_col_name]) % 256
+            lambda row: psets_color_and_alluvial_position[
+                (selected_partition_col_name, row[selected_partition_col_name])
             ],
             axis=1,
         )
@@ -99,11 +117,13 @@ def selection_update_tap(
     fig_obj,
     col_names,
     y_start,
+    psets_color_and_alluvial_position,
     skewer_params,
 ):
     # assign colors based on unique values of color_col_name
     df_assign_colors(
         df,
+        psets_color_and_alluvial_position,
         curr_selection["color_col_name"],
         skewer_params["color_col_name"],
         remove_colors=len(curr_selection["cluster_ids"]) == 0
@@ -115,13 +135,20 @@ def selection_update_tap(
         df,
         df_filtered,
         y_start,
+        psets_color_and_alluvial_position,
         skewer_params,
         col_names,
         curr_selection,
         old_selection,
     )
     fig_obj["cim"].update_selection(
-        df, df_filtered, skewer_params, col_names, curr_selection, old_selection
+        df,
+        df_filtered,
+        skewer_params,
+        psets_color_and_alluvial_position,
+        col_names,
+        curr_selection,
+        old_selection,
     )
     fig_obj["metamap_edit_dist"].update_selection(
         df_filtered, skewer_params, col_names, curr_selection, old_selection

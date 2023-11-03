@@ -27,6 +27,7 @@ from vis_interaction import (
 )
 from vis_params import set_skewer_params
 from helper_functions_project_specific import column_names
+from color_mapping_sets import get_setwise_color_allocation
 
 
 def is_number(s):
@@ -45,7 +46,7 @@ class drcl_vis_wrapper:
         col_names,
         col_names_as_list_of_numbers=None,
         sequential_variable_name=None,
-        bool_reduce_intersections_neighbours=True,
+        bool_reduce_intersections_neighbours=False,
     ):
         if sequential_variable_name == None:
             sequential_variable_name = "Sequential Variable"
@@ -64,9 +65,10 @@ class drcl_vis_wrapper:
 
             if col_names_are_categorical:
                 col_names_as_list_of_numbers = list(range(len(col_names)))
+
         elif len(col_names_as_list_of_numbers) != len(col_names):
             print("len(col_names_as_list_of_numbers) != len(col_names). Terminating...")
-            return
+            exit(1)
         column_details_df = pd.DataFrame(
             {sequential_variable_name: col_names_as_list_of_numbers}, index=col_names
         )
@@ -104,8 +106,13 @@ class drcl_vis_wrapper:
             self.y_start,
         ) = calc_alluvial_bar_params(self.df, self.col_names)
 
+        self.psets_color_and_alluvial_position = get_setwise_color_allocation(
+            self.df[self.col_names]
+        )
+
         df_assign_colors(
             self.df,
+            self.psets_color_and_alluvial_position,
             self.curr_selection["color_col_name"],
             self.skewer_params["color_col_name"],
             remove_colors=len(self.curr_selection["cluster_ids"]) == 0
@@ -117,6 +124,7 @@ class drcl_vis_wrapper:
             self.df,
             column_details_df,
             self.y_start,
+            self.psets_color_and_alluvial_position,
             self.skewer_params,
             self.col_names,
             self.curr_selection,
@@ -125,6 +133,7 @@ class drcl_vis_wrapper:
             self.fig_obj["alluvial"].p.x_range,
             self.df,
             self.skewer_params,
+            self.psets_color_and_alluvial_position,
             self.col_names,
             self.curr_selection,
         )
@@ -247,6 +256,7 @@ class drcl_vis_wrapper:
             self.fig_obj,
             self.col_names,
             self.y_start,
+            self.psets_color_and_alluvial_position,
             self.skewer_params,
         )
 

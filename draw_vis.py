@@ -30,6 +30,7 @@ from vis_params import color_palette
 from df_preprocessing import calc_FMI
 from helper_functions_project_specific import to_empty_dict, get_unique_vals
 from helper_functions_generic import timer
+from color_mapping_sets import get_color_sort_order
 
 
 def draw_vlines(p, col_names):
@@ -253,7 +254,14 @@ def reduce_pd_series_to_n_values_preserving_freq_dist(df_series, n=1000):
 
 class alluvial:
     def __init__(
-        self, df, column_details_df, y_start, skewer_params, col_names, curr_selection
+        self,
+        df,
+        column_details_df,
+        y_start,
+        psets_color_and_alluvial_position,
+        skewer_params,
+        col_names,
+        curr_selection,
     ):
         self.p = self.generate_figure(skewer_params)
         draw_vlines(self.p, col_names)
@@ -270,6 +278,7 @@ class alluvial:
             df,
             df,
             y_start,
+            psets_color_and_alluvial_position,
             skewer_params,
             col_names,
             curr_selection,
@@ -728,7 +737,15 @@ class alluvial:
 
     class alluvial_edges:
         def __init__(
-            self, p, df, df_filtered, y_start, skewer_params, col_names, curr_selection
+            self,
+            p,
+            df,
+            df_filtered,
+            y_start,
+            psets_color_and_alluvial_position,
+            skewer_params,
+            col_names,
+            curr_selection,
         ):
             self.resolution = 100
             self.glyph_vars = ["xs", "ys", "fill_color", "alpha"]
@@ -747,6 +764,7 @@ class alluvial:
                 df,
                 df_filtered,
                 y_start,
+                psets_color_and_alluvial_position,
                 skewer_params,
                 col_names,
                 curr_selection,
@@ -760,7 +778,9 @@ class alluvial:
             color_col_name,
             width_per_count,
             y_start,
+            psets_color_and_alluvial_position,
             bar_width,
+            curr_selection,
         ):
             if len(col_names) < 2:
                 # No alluvial edges if number of columns less than 2
@@ -783,8 +803,11 @@ class alluvial:
                 # 1. color - based on the order of color from bottom to top in the selected partition,
                 # 2. Location of start point - order of set on the left
                 # 3. Location of end point - order of set to the right)
-                color_sort_order = color_palette(
-                    df_non_filtered[color_col_name].unique().size
+                # color_sort_order = color_palette(
+                #     df_non_filtered[color_col_name].unique().size
+                # )
+                color_sort_order = get_color_sort_order(
+                    psets_color_and_alluvial_position, curr_selection["color_col_name"]
                 )
                 df_se = df_se.reset_index()
                 df_se["color_index"] = df_se.apply(
@@ -854,6 +877,7 @@ class alluvial:
             df,
             df_filtered,
             y_start,
+            psets_color_and_alluvial_position,
             skewer_params,
             col_names,
             curr_selection,
@@ -866,7 +890,9 @@ class alluvial:
                 skewer_params["color_col_name"],
                 skewer_params["width_per_count"],
                 y_start,
+                psets_color_and_alluvial_position,
                 skewer_params["bar_width"],
+                curr_selection,
             )
 
         def get_edges_dict_calc_xs(self, x0, x1):
@@ -1081,6 +1107,7 @@ class alluvial:
         df,
         df_filtered,
         y_start,
+        psets_color_and_alluvial_position,
         skewer_params,
         col_names,
         curr_selection,
@@ -1094,6 +1121,7 @@ class alluvial:
             df,
             df_filtered,
             y_start,
+            psets_color_and_alluvial_position,
             skewer_params,
             col_names,
             curr_selection,
@@ -1138,7 +1166,15 @@ class alluvial:
 
 
 class cim:
-    def __init__(self, x_range, df, skewer_params, col_names, curr_selection):
+    def __init__(
+        self,
+        x_range,
+        df,
+        skewer_params,
+        psets_color_and_alluvial_position,
+        col_names,
+        curr_selection,
+    ):
         self.p_normal, self.p_inverted = self.generate_figures(x_range, skewer_params)
         draw_vlines(self.p_normal, col_names)
         draw_vlines(self.p_inverted, col_names)
@@ -1148,6 +1184,7 @@ class cim:
             self.p_normal,
             df,
             skewer_params,
+            psets_color_and_alluvial_position,
             col_names,
             curr_selection,
         )
@@ -1161,7 +1198,15 @@ class cim:
         )
 
     class cim_overlap:
-        def __init__(self, p, df, skewer_params, col_names, curr_selection):
+        def __init__(
+            self,
+            p,
+            df,
+            skewer_params,
+            psets_color_and_alluvial_position,
+            col_names,
+            curr_selection,
+        ):
             self.glyph_vars = ["left", "right", "top", "bottom", "fill_color"]
             src = ColumnDataSource(to_empty_dict(self.glyph_vars))
             self.glyph = p.quad(
@@ -1180,6 +1225,7 @@ class cim:
                 df,
                 df,
                 skewer_params,
+                psets_color_and_alluvial_position,
                 col_names,
                 curr_selection,
             )
@@ -1189,6 +1235,7 @@ class cim:
             df_non_filtered,
             df,
             skewer_params,
+            psets_color_and_alluvial_position,
             col_names,
             wrt_col_name,
             bool_measure_only=False,
@@ -1287,9 +1334,13 @@ class cim:
 
                 ###############################################################################################
                 # (sort by color - based on the order of color from bottom to top in the selected partition)
-                color_sort_order = color_palette(
-                    df_non_filtered[skewer_params["color_col_name"]].unique().size
+                color_sort_order = get_color_sort_order(
+                    psets_color_and_alluvial_position, wrt_col_name
                 )
+
+                # color_palette(
+                #     df_non_filtered[skewer_params["color_col_name"]].unique().size
+                # )
                 df_cim_overlap_temp = df_cim_overlap_temp.reset_index()
                 df_cim_overlap_temp["color_index"] = df_cim_overlap_temp.apply(
                     lambda row: color_sort_order.index(row["fill_color"]),
@@ -1345,6 +1396,7 @@ class cim:
             df_non_filtered,
             df,
             skewer_params,
+            psets_color_and_alluvial_position,
             col_names,
             curr_selection,
             old_selection=None,
@@ -1354,6 +1406,7 @@ class cim:
                 df_non_filtered,
                 df,
                 skewer_params,
+                psets_color_and_alluvial_position,
                 col_names,
                 curr_selection["color_col_name"],
             )
@@ -1513,6 +1566,7 @@ class cim:
         df_non_filtered,
         df_filtered,
         skewer_params,
+        psets_color_and_alluvial_position,
         col_names,
         curr_selection,
         old_selection,
@@ -1521,6 +1575,7 @@ class cim:
             df_non_filtered,
             df_filtered,
             skewer_params,
+            psets_color_and_alluvial_position,
             col_names,
             curr_selection,
             old_selection,
