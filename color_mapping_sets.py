@@ -4,6 +4,7 @@ from sklearn.manifold import MDS
 from sklearn.preprocessing import MinMaxScaler
 from colormath.color_objects import LabColor, sRGBColor
 from colormath.color_conversions import convert_color
+from copy import deepcopy
 
 # from bokeh.plotting import figure, show
 # from bokeh.models import ColumnDataSource
@@ -62,21 +63,73 @@ def get_setwise_color_allocation(df):
     #####################################################################################################
     row_indexes = {}
     # Iterate through the columns and unique values
-    for column_name in df.columns:
-        for unique_value in df[column_name].unique():
-            key = (column_name, unique_value)
-            row_indexes[key] = df[df[column_name] == unique_value].index.tolist()
+    for col_name in df.columns:
+        for unique_value in df[col_name].unique():
+            key = (col_name, unique_value)
+            row_indexes[key] = df[df[col_name] == unique_value].index.tolist()
 
     #####################################################################################################
-    # Calculate the dissimilarity matrix and based on that the 2D MDS projection of sets
+    # Calculate the dissimilarity matrix (Jaccard index) and based on that the 2D MDS projection of sets
     #####################################################################################################
     dissimilarity_matrix = compute_dissimilarity_matrix(df, row_indexes)
     # Compute a 2D projection using MDS
-    mds = MDS(n_components=2, dissimilarity="precomputed")
+    mds = MDS(n_components=2, dissimilarity="precomputed", random_state=19)
     projection = mds.fit_transform(dissimilarity_matrix)
     # Create a DataFrame for the projection data
     projection_df = pd.DataFrame({"x": projection[:, 0], "y": projection[:, 1]})
     projection_df["label"] = list(row_indexes.keys())
+    projection_df["partition_col_name"] = projection_df.apply(
+        lambda row: row["label"][0], axis=1
+    )
+    projection_df["partition_set_categorical_value"] = projection_df.apply(
+        lambda row: row["label"][1], axis=1
+    )
+
+    #####################################################################################################
+    # 1D MDS projection of sets for sequencing of sets within individual partitions
+    #####################################################################################################
+    # Compute a 1D projection using MDS
+    mds = MDS(n_components=1, dissimilarity="precomputed", random_state=19)
+    projection = mds.fit_transform(dissimilarity_matrix)
+    # Add the projection data to the projection df
+    projection_df["1D_proj"] = projection[:, 0]
+
+    spacing_ratio = 0.5
+    width_per_count = (1 - spacing_ratio) / len(df.index)
+    projection_df_column_combined = None
+    for col_name in df.columns:
+        projection_df_column = deepcopy(
+            projection_df[projection_df["partition_col_name"] == col_name].sort_values(
+                "1D_proj"
+            )
+        )
+        projection_df_column = projection_df_column.reset_index(drop=True)
+        if len(projection_df_column.index) == 1:
+            spacing_width = 0
+        else:
+            spacing_width = spacing_ratio / (len(projection_df_column.index) - 1)
+        projection_df_column["width"] = projection_df_column.apply(
+            lambda row: (
+                df[col_name].values == row["partition_set_categorical_value"]
+            ).sum()
+            * width_per_count,
+            axis=1,
+        )
+        projection_df_column["y_end"] = (
+            projection_df_column["width"].cumsum()
+            + projection_df_column.index * spacing_width
+        )
+        projection_df_column["y_start"] = (
+            projection_df_column["y_end"] - projection_df_column["width"]
+        )
+        if not isinstance(projection_df_column_combined, pd.DataFrame):
+            projection_df_column_combined = projection_df_column
+        else:
+            projection_df_column_combined = pd.concat(
+                [projection_df_column_combined, projection_df_column], ignore_index=True
+            )
+    projection_df = projection_df_column_combined
+    print(projection_df)
 
     #####################################################################################################
     # Allocate these points (sets) a color based on 2D CIELab (L value fixed)
@@ -94,19 +147,26 @@ def get_setwise_color_allocation(df):
     projection_df[["a_star", "b_star"]] = scaler.fit_transform(
         projection_df[["a_star", "b_star"]]
     )
-    print(projection_df[["a_star", "b_star"]])
     # Convert a*, b* to color representation
     projection_df["color"] = projection_df.apply(
         lambda row: lab_to_rgb(row["a_star"], row["b_star"]), axis=1
     )
-    # print(projection_df)
 
     #####################################################################################################
     # Returning dict with key: (Column Name, Unique Categorical Value), value: color
     #####################################################################################################
-    # projection_df = projection_df[["label", "color"]]
     label_color_dict = dict(zip(projection_df["label"], projection_df["color"]))
-    return label_color_dict
+    setwise_position_df = projection_df[
+        [
+            "label",
+            "partition_col_name",
+            "partition_set_categorical_value",
+            "width",
+            "y_start",
+            "y_end",
+        ]
+    ]
+    return label_color_dict, setwise_position_df
 
 
 def get_color_sort_order(

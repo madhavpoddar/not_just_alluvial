@@ -106,9 +106,10 @@ class drcl_vis_wrapper:
             self.y_start,
         ) = calc_alluvial_bar_params(self.df, self.col_names)
 
-        self.psets_color_and_alluvial_position = get_setwise_color_allocation(
-            self.df[self.col_names]
-        )
+        (
+            self.psets_color_and_alluvial_position,
+            self.setwise_position_df,
+        ) = get_setwise_color_allocation(self.df[self.col_names])
 
         df_assign_colors(
             self.df,
@@ -123,7 +124,7 @@ class drcl_vis_wrapper:
         self.fig_obj["alluvial"] = alluvial(
             self.df,
             column_details_df,
-            self.y_start,
+            self.setwise_position_df,
             self.psets_color_and_alluvial_position,
             self.skewer_params,
             self.col_names,
@@ -174,8 +175,9 @@ class drcl_vis_wrapper:
         )
 
         # TODO: remove this line later
-        self.empty_fig0 = figure(width=800, height=800)
-        self.empty_fig1 = figure(width=300, height=390)
+        # self.empty_fig0 = figure(width=800, height=800)
+        # self.empty_fig1 = figure(width=300, height=390)
+
         self.layout = self.generate_layout()
 
     def generate_layout(self):
@@ -246,7 +248,7 @@ class drcl_vis_wrapper:
     def tap_callback(self, event):
         old_selection = copy.deepcopy(self.curr_selection)
         self.curr_selection = calc_curr_selection(
-            event, old_selection, self.y_start, self.col_names
+            event, old_selection, self.y_start, self.setwise_position_df, self.col_names
         )
         print("Current selection: " + str(self.curr_selection))
         self.df, self.df_filtered = selection_update_tap(
@@ -255,7 +257,7 @@ class drcl_vis_wrapper:
             self.df,
             self.fig_obj,
             self.col_names,
-            self.y_start,
+            self.setwise_position_df,
             self.psets_color_and_alluvial_position,
             self.skewer_params,
         )
@@ -277,7 +279,8 @@ class drcl_vis_wrapper:
         self.fig_obj["alluvial"].alluvial_edges_obj.update_selection(
             self.df,
             self.df_filtered,
-            self.y_start,
+            self.setwise_position_df,
+            self.psets_color_and_alluvial_position,
             self.skewer_params,
             self.col_names,
             self.curr_selection,

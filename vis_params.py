@@ -1,7 +1,8 @@
 from bokeh.palettes import turbo
 import random
 import string
-import glasbey
+
+# import glasbey
 
 
 # all the visualization parameters are assigned here
@@ -88,9 +89,9 @@ def set_skewer_params(df, col_names):
 
 
 def color_palette(num_colors: int, shuffle=True):
-    return glasbey.create_palette(palette_size=num_colors)
-    if num_colors == 2:
-        return ["indigo", "goldenrod"]
+    # return glasbey.create_palette(palette_size=num_colors)
+    # if num_colors == 2:
+    #     return ["indigo", "goldenrod"]
     colors = list(turbo(num_colors))
     if shuffle:
         random.seed(0)

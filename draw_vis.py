@@ -257,7 +257,7 @@ class alluvial:
         self,
         df,
         column_details_df,
-        y_start,
+        setwise_position_df,
         psets_color_and_alluvial_position,
         skewer_params,
         col_names,
@@ -271,13 +271,14 @@ class alluvial:
             df,
             skewer_params,
             col_names,
+            setwise_position_df,
             curr_selection,
         )
         self.alluvial_edges_obj = self.alluvial_edges(
             self.p,
             df,
             df,
-            y_start,
+            setwise_position_df,
             psets_color_and_alluvial_position,
             skewer_params,
             col_names,
@@ -641,7 +642,9 @@ class alluvial:
             return p
 
     class alluvial_cluster_bars:
-        def __init__(self, p, df, skewer_params, col_names, curr_selection):
+        def __init__(
+            self, p, df, skewer_params, col_names, setwise_position_df, curr_selection
+        ):
             self.glyph_vars = ["left", "right", "top", "bottom", "line_color"]
             src = ColumnDataSource(to_empty_dict(self.glyph_vars))
             self.glyph = p.quad(
@@ -660,6 +663,7 @@ class alluvial:
                 df,
                 skewer_params,
                 col_names,
+                setwise_position_df,
                 curr_selection,
             )
 
@@ -668,6 +672,7 @@ class alluvial:
             df,
             skewer_params,
             col_names,
+            setwise_position_df,
             curr_selection,
         ):
             df_cb_combined = None
@@ -693,16 +698,29 @@ class alluvial:
                     ),
                     axis=1,
                 )
-                if len(df_cb.index) < 2:
-                    df_cb["bottom"] = 0
-                else:
-                    df_cb["bottom"] = (
-                        df_cb.index
-                        * skewer_params["spacing_ratio"]
-                        / (len(df_cb.index) - 1)
-                    )
-                df_cb["top"] = df_cb["bottom"] + df_cb["width"].cumsum()
-                df_cb["bottom"] = df_cb["top"] - df_cb["width"]
+                df_cb["bottom"] = df_cb.apply(
+                    lambda row: setwise_position_df[
+                        setwise_position_df["label"] == (col_name, row["cluster_id"])
+                    ]["y_start"].values[0],
+                    axis=1,
+                )
+                df_cb["top"] = df_cb.apply(
+                    lambda row: setwise_position_df[
+                        setwise_position_df["label"] == (col_name, row["cluster_id"])
+                    ]["y_end"].values[0],
+                    axis=1,
+                )
+                # print(df_cb)
+                # if len(df_cb.index) < 2:
+                #     df_cb["bottom"] = 0
+                # else:
+                #     df_cb["bottom"] = (
+                #         df_cb.index
+                #         * skewer_params["spacing_ratio"]
+                #         / (len(df_cb.index) - 1)
+                #     )
+                # df_cb["top"] = df_cb["bottom"] + df_cb["width"].cumsum()
+                # df_cb["bottom"] = df_cb["top"] - df_cb["width"]
                 if not isinstance(df_cb_combined, pd.DataFrame):
                     df_cb_combined = df_cb
                 else:
@@ -712,12 +730,19 @@ class alluvial:
             return df_cb_combined[self.glyph_vars].to_dict("list")
 
         def update_selection(
-            self, df, skewer_params, col_names, curr_selection, old_selection=None
+            self,
+            df,
+            skewer_params,
+            col_names,
+            setwise_position_df,
+            curr_selection,
+            old_selection=None,
         ):
             self.glyph.data_source.data = self.get_cds_dict(
                 df,
                 skewer_params,
                 col_names,
+                setwise_position_df,
                 curr_selection,
             )
 
@@ -741,7 +766,7 @@ class alluvial:
             p,
             df,
             df_filtered,
-            y_start,
+            setwise_position_df,
             psets_color_and_alluvial_position,
             skewer_params,
             col_names,
@@ -763,7 +788,7 @@ class alluvial:
             self.update_selection(
                 df,
                 df_filtered,
-                y_start,
+                setwise_position_df,
                 psets_color_and_alluvial_position,
                 skewer_params,
                 col_names,
@@ -777,7 +802,7 @@ class alluvial:
             col_names,
             color_col_name,
             width_per_count,
-            y_start,
+            setwise_position_df,
             psets_color_and_alluvial_position,
             bar_width,
             curr_selection,
@@ -837,8 +862,46 @@ class alluvial:
                 df_se["y1_start"] = None
                 df_se["fill_color"] = df_se.index.get_level_values(0)
 
-                y_start_0 = copy.deepcopy(y_start[col_id_0])
-                y_start_1 = copy.deepcopy(y_start[col_id_1])
+                # y_start_0 = copy.deepcopy(y_start[col_id_0])
+                # y_start_1 = copy.deepcopy(y_start[col_id_1])
+
+                # Filter the DataFrame based on the condition
+                filtered_setwise_position_df_0 = setwise_position_df[
+                    setwise_position_df["partition_col_name"] == col_name_0
+                ]
+                # Create a dictionary using "partition_set_categorical_value" as keys and "y_start" as values
+                filtered_setwise_position_dict_0 = dict(
+                    zip(
+                        filtered_setwise_position_df_0[
+                            "partition_set_categorical_value"
+                        ],
+                        filtered_setwise_position_df_0["y_start"],
+                    )
+                )
+                # Filter the DataFrame based on the condition
+                filtered_setwise_position_df_1 = setwise_position_df[
+                    setwise_position_df["partition_col_name"] == col_name_1
+                ]
+                # Create a dictionary using "partition_set_categorical_value" as keys and "y_start" as values
+                filtered_setwise_position_dict_1 = dict(
+                    zip(
+                        filtered_setwise_position_df_1[
+                            "partition_set_categorical_value"
+                        ],
+                        filtered_setwise_position_df_1["y_start"],
+                    )
+                )
+
+                y_start_0 = copy.deepcopy(filtered_setwise_position_dict_0)
+                y_start_1 = copy.deepcopy(filtered_setwise_position_dict_1)
+                # print(y_start[col_id_0])
+                # print(
+                #     list(
+                #         setwise_position_df[
+                #             setwise_position_df["partition_col_name"] == col_name_0
+                #         ]["y_start"].values
+                #     )
+                # )
 
                 # Define a custom function to update the DataFrame
                 def update_y_start(row):
@@ -876,7 +939,7 @@ class alluvial:
             self,
             df,
             df_filtered,
-            y_start,
+            setwise_position_df,
             psets_color_and_alluvial_position,
             skewer_params,
             col_names,
@@ -889,7 +952,7 @@ class alluvial:
                 col_names,
                 skewer_params["color_col_name"],
                 skewer_params["width_per_count"],
-                y_start,
+                setwise_position_df,
                 psets_color_and_alluvial_position,
                 skewer_params["bar_width"],
                 curr_selection,
@@ -1106,7 +1169,7 @@ class alluvial:
         self,
         df,
         df_filtered,
-        y_start,
+        setwise_position_df,
         psets_color_and_alluvial_position,
         skewer_params,
         col_names,
@@ -1120,7 +1183,7 @@ class alluvial:
         self.alluvial_edges_obj.update_selection(
             df,
             df_filtered,
-            y_start,
+            setwise_position_df,
             psets_color_and_alluvial_position,
             skewer_params,
             col_names,
@@ -1128,7 +1191,12 @@ class alluvial:
             old_selection,
         )
         self.alluvial_cluster_bars_obj.update_selection(
-            df, skewer_params, col_names, curr_selection, old_selection
+            df,
+            skewer_params,
+            col_names,
+            setwise_position_df,
+            curr_selection,
+            old_selection,
         )
         self.number_line_selection_ellipse_obj.update_selection(
             self.number_line_df,

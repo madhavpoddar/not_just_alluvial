@@ -13,25 +13,41 @@ def set_initial_curr_selection(col_names):
     }
 
 
-def calc_index_cid_clicked(event, y_start):
+def calc_index_cid_clicked(event, col_names, y_start, setwise_position_df):
     index = round(event.x)
-    if index in range(len(y_start)):
+    if index in range(len(col_names)):
         c_id_index = -1
-        for i in range(len(y_start[index])):
-            if i == len(y_start[index]) - 1:
-                if event.y > y_start[index][i]:
+        col_name_filtered_setwise_position_df = setwise_position_df[
+            setwise_position_df["partition_col_name"] == col_names[index]
+        ]
+        print(col_name_filtered_setwise_position_df)
+        y_starts = col_name_filtered_setwise_position_df["y_start"].values
+        for i in range(len(y_starts)):
+            if i == len(y_starts) - 1:
+                if event.y > y_starts[i]:
                     c_id_index = i
                     break
             else:
-                if event.y > y_start[index][i] and event.y < y_start[index][i + 1]:
+                if event.y > y_starts[i] and event.y < y_starts[i + 1]:
                     c_id_index = i
                     break
         if c_id_index != -1:
-            return index, c_id_index
+            print("i=", i)
+            print(
+                col_name_filtered_setwise_position_df[
+                    "partition_set_categorical_value"
+                ].iloc[i]
+            )
+            return (
+                index,
+                col_name_filtered_setwise_position_df[
+                    "partition_set_categorical_value"
+                ].iloc[i],
+            )
     return None, None
 
 
-def calc_curr_selection(event, old_selection, y_start, col_names):
+def calc_curr_selection(event, old_selection, y_start, setwise_position_df, col_names):
     curr_selection = copy.deepcopy(old_selection)
     if event.y < 0:
         # Unselect existing curr_selection circle
@@ -45,7 +61,9 @@ def calc_curr_selection(event, old_selection, y_start, col_names):
         else:
             curr_selection["color_col_name"] = None
     else:
-        cs_col_id, cs_cluster_id = calc_index_cid_clicked(event, y_start)
+        cs_col_id, cs_cluster_id = calc_index_cid_clicked(
+            event, col_names, y_start, setwise_position_df
+        )
         if cs_col_id == None:
             return curr_selection
         cs_col_name = col_names[cs_col_id]
@@ -73,14 +91,14 @@ def df_assign_colors(
     if remove_colors:
         df.loc[:, color_col_name] = "gray"
     else:
-        unique_vals = get_unique_vals(df, selected_partition_col_name)
-        print(psets_color_and_alluvial_position)
-        for unique_val in unique_vals:
-            print(
-                psets_color_and_alluvial_position[
-                    (selected_partition_col_name, unique_val)
-                ]
-            )
+        # unique_vals = get_unique_vals(df, selected_partition_col_name)
+        # print(psets_color_and_alluvial_position)
+        # for unique_val in unique_vals:
+        #     print(
+        #         psets_color_and_alluvial_position[
+        #             (selected_partition_col_name, unique_val)
+        #         ]
+        #     )
         # colors = color_palette(min(len(unique_vals), 256))
         # df[color_col_name] = df.apply(
         #     lambda row: colors[
@@ -116,7 +134,7 @@ def selection_update_tap(
     df,
     fig_obj,
     col_names,
-    y_start,
+    setwise_position_df,
     psets_color_and_alluvial_position,
     skewer_params,
 ):
@@ -134,7 +152,7 @@ def selection_update_tap(
     fig_obj["alluvial"].update_selection(
         df,
         df_filtered,
-        y_start,
+        setwise_position_df,
         psets_color_and_alluvial_position,
         skewer_params,
         col_names,
@@ -165,7 +183,7 @@ def selection_update_tap(
 #     df,
 #     fig_obj,
 #     col_names,
-#     y_start,
+#     setwise_position_df,
 #     skewer_params,
 # ):
 #     selection_update_double_tap(
@@ -174,6 +192,6 @@ def selection_update_tap(
 #         df,
 #         fig_obj,
 #         col_names,
-#         y_start,
+#         setwise_position_df,
 #         skewer_params,
 #     )
