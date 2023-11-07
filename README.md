@@ -3,7 +3,7 @@ To run this, you need conda.
 Once conda is installed go to the main project folder and type the following commands:
 <code>
 
-conda env create --name nja --file=nja_environment.yml
+conda env create --name nja --file=nja_env.yml
 
 conda activate nja
 
