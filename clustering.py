@@ -9,15 +9,18 @@ import random
 def add_clustering_data(df, n_dim_list, dim_reduced_data, clustering_alg="kmeans"):
     col_names = []
     print("Performing Clustering")
-    n_clusters_list = [2,3,4,5,6,7,8]
-    if clustering_alg == "kmeans":
-        # for i, n_dim in tqdm(enumerate(n_dim_list)):
-        for i, n_clusters in tqdm(enumerate(n_clusters_list)):
-            n_dim = 2
-            col_name = str(n_clusters)
 
-            # n_clusters = 25
-            # col_name = str(n_dim)
+    # n_clusters_list = [2,3,4,5,6,7,8]
+    # n_dim = 2
+
+    n_clusters = 25
+
+    if clustering_alg == "kmeans":
+        for i, n_dim in tqdm(enumerate(n_dim_list)):
+            # for i, n_clusters in tqdm(enumerate(n_clusters_list)):
+
+            # col_name = str(n_clusters)
+            col_name = str(n_dim)
             col_names.append(col_name)
 
             # For testing purpose

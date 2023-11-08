@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from sklearn.manifold import MDS
+from sklearn.manifold import MDS, TSNE
 from sklearn.preprocessing import MinMaxScaler
 from colormath.color_objects import LabColor, sRGBColor
 from colormath.color_conversions import convert_color
@@ -73,7 +73,12 @@ def get_setwise_color_allocation(df):
     #####################################################################################################
     dissimilarity_matrix = compute_dissimilarity_matrix(df, row_indexes)
     # Compute a 2D projection using MDS
-    mds = MDS(n_components=2, dissimilarity="precomputed", random_state=19)
+    mds = MDS(
+        n_components=2,
+        dissimilarity="precomputed",
+        random_state=19,
+        normalized_stress="auto",
+    )
     projection = mds.fit_transform(dissimilarity_matrix)
     # Create a DataFrame for the projection data
     projection_df = pd.DataFrame({"x": projection[:, 0], "y": projection[:, 1]})
@@ -89,8 +94,16 @@ def get_setwise_color_allocation(df):
     # 1D MDS projection of sets for sequencing of sets within individual partitions
     #####################################################################################################
     # Compute a 1D projection using MDS
-    mds = MDS(n_components=1, dissimilarity="precomputed", random_state=19)
+    mds = MDS(
+        n_components=1,
+        dissimilarity="precomputed",
+        random_state=19,
+        normalized_stress="auto",
+    )
     projection = mds.fit_transform(dissimilarity_matrix)
+    # tsne = TSNE(n_components=1, random_state=19)
+    # projection = tsne.fit_transform(projection)
+
     # Add the projection data to the projection df
     projection_df["1D_proj"] = projection[:, 0]
 
@@ -100,7 +113,7 @@ def get_setwise_color_allocation(df):
     for col_name in df.columns:
         projection_df_column = deepcopy(
             projection_df[projection_df["partition_col_name"] == col_name].sort_values(
-                "1D_proj"
+                "y"
             )
         )
         projection_df_column = projection_df_column.reset_index(drop=True)
@@ -129,7 +142,6 @@ def get_setwise_color_allocation(df):
                 [projection_df_column_combined, projection_df_column], ignore_index=True
             )
     projection_df = projection_df_column_combined
-    print(projection_df)
 
     #####################################################################################################
     # Allocate these points (sets) a color based on 2D CIELab (L value fixed)
@@ -156,7 +168,7 @@ def get_setwise_color_allocation(df):
     # Returning dict with key: (Column Name, Unique Categorical Value), value: color
     #####################################################################################################
     label_color_dict = dict(zip(projection_df["label"], projection_df["color"]))
-    setwise_position_df = projection_df[
+    psets_vertical_ordering_df = projection_df[
         [
             "label",
             "partition_col_name",
@@ -166,145 +178,13 @@ def get_setwise_color_allocation(df):
             "y_end",
         ]
     ]
-    return label_color_dict, setwise_position_df
+    return label_color_dict, psets_vertical_ordering_df
 
 
-def get_color_sort_order(
-    psets_color_and_alluvial_position, selected_partition_col_name
-):
+def get_color_sort_order(psets_color, selected_partition_col_name):
     color_sort_order = []
-    for partition_col_name, unique_val in psets_color_and_alluvial_position.keys():
+    for partition_col_name, unique_val in psets_color.keys():
         if partition_col_name == selected_partition_col_name:
-            color_sort_order.append(
-                psets_color_and_alluvial_position[(partition_col_name, unique_val)]
-            )
+            color_sort_order.append(psets_color[(partition_col_name, unique_val)])
 
     return color_sort_order
-
-
-# # Sample DataFrame
-# data = {
-#     "Category_1": [
-#         "a",
-#         "b",
-#         "c",
-#         "a",
-#         "b",
-#         "c",
-#         "b",
-#         "c",
-#         "c",
-#         "b",
-#         "a",
-#         "a",
-#         "b",
-#         "b",
-#         "a",
-#     ],
-#     "Category_2": [1, 3, 4, 3, 1, 4, 3, 1, 4, 1, 3, 4, 1, 3, 1],
-#     "Category_3": [
-#         "b",
-#         "c",
-#         "d",
-#         "b",
-#         "c",
-#         "d",
-#         "b",
-#         "c",
-#         "d",
-#         "b",
-#         "c",
-#         "d",
-#         "b",
-#         "c",
-#         "b",
-#     ],
-# }
-# df = pd.DataFrame(data)
-# get_setwise_color_allocation(df)
-
-# Create a Bokeh ColumnDataSource
-# source = ColumnDataSource(projection_df)
-# # Create a Bokeh plot
-# p = figure(
-#     title="2D Projection of Set Individual Partitions", width=800, height=600
-# )
-# p.scatter("x", "y", source=source, size=8, color="color")
-# # # Add labels to the points
-# # labels = LabelSet(x='x', y='y', text='label', level='glyph', x_offset=5, y_offset=5,
-# #                   source=source, render_mode='canvas')
-# # p.add_layout(labels)
-# # Display the plot
-# show(p)
-
-# import pandas as pd
-# import itertools
-
-# # Create the dataframe and define col_names
-# data = {
-#     "Category_1": [
-#         "a",
-#         "b",
-#         "c",
-#         "a",
-#         "b",
-#         "c",
-#         "b",
-#         "c",
-#         "c",
-#         "b",
-#         "a",
-#         "a",
-#         "b",
-#         "b",
-#         "a",
-#     ],
-#     "Category_2": [1, 3, 4, 3, 1, 4, 3, 1, 4, 1, 3, 4, 1, 3, 1],
-#     "Category_3": [
-#         "b",
-#         "c",
-#         "d",
-#         "b",
-#         "c",
-#         "d",
-#         "b",
-#         "c",
-#         "d",
-#         "b",
-#         "c",
-#         "d",
-#         "b",
-#         "c",
-#         "b",
-#     ],
-# }
-# df = pd.DataFrame(data)
-# col_names = ["Category_1", "Category_2", "Category_3"]
-
-
-# # Define a function to calculate the cost (crossings) of a given order
-# def calculate_cost(order, df):
-#     cost = 0
-#     for i in range(len(order) - 1):
-#         for j in range(i + 1, len(order)):
-#             col_1, order_1 = order[i]
-#             col_2, order_2 = order[j]
-#             pairs = list(itertools.product(order_1, order_2))
-#             cost += sum(
-#                 df[df[col_1].eq(pair[0]) & df[col_2].eq(pair[1])].shape[0]
-#                 for pair in pairs
-#             )
-#     return -cost  # We want to minimize the cost, so negate it
-
-
-# # Initialize the order randomly
-# initial_order = [(col, list(df[col].unique())) for col in col_names]
-
-# # Import the simulated annealing optimizer from the SciPy library
-# from scipy.optimize import basinhopping
-
-# # Optimize the order
-# result = basinhopping(calculate_cost, initial_order, minimizer_kwargs={"args": (df,)})
-# final_order = {col: result.x[i][1] for i, col in enumerate(col_names)}
-
-# print(final_order)

@@ -14,6 +14,7 @@ from bokeh.models import (
     MultiChoice,
     MultiSelect,
     CheckboxGroup,
+    CheckboxButtonGroup,
     RadioButtonGroup,
     DataTable,
     TableColumn,
@@ -257,8 +258,8 @@ class alluvial:
         self,
         df,
         column_details_df,
-        setwise_position_df,
-        psets_color_and_alluvial_position,
+        psets_vertical_ordering_df,
+        psets_color,
         skewer_params,
         col_names,
         curr_selection,
@@ -271,15 +272,15 @@ class alluvial:
             df,
             skewer_params,
             col_names,
-            setwise_position_df,
+            psets_vertical_ordering_df,
             curr_selection,
         )
         self.alluvial_edges_obj = self.alluvial_edges(
             self.p,
             df,
             df,
-            setwise_position_df,
-            psets_color_and_alluvial_position,
+            psets_vertical_ordering_df,
+            psets_color,
             skewer_params,
             col_names,
             curr_selection,
@@ -643,7 +644,13 @@ class alluvial:
 
     class alluvial_cluster_bars:
         def __init__(
-            self, p, df, skewer_params, col_names, setwise_position_df, curr_selection
+            self,
+            p,
+            df,
+            skewer_params,
+            col_names,
+            psets_vertical_ordering_df,
+            curr_selection,
         ):
             self.glyph_vars = ["left", "right", "top", "bottom", "line_color"]
             src = ColumnDataSource(to_empty_dict(self.glyph_vars))
@@ -663,7 +670,7 @@ class alluvial:
                 df,
                 skewer_params,
                 col_names,
-                setwise_position_df,
+                psets_vertical_ordering_df,
                 curr_selection,
             )
 
@@ -672,7 +679,7 @@ class alluvial:
             df,
             skewer_params,
             col_names,
-            setwise_position_df,
+            psets_vertical_ordering_df,
             curr_selection,
         ):
             df_cb_combined = None
@@ -699,14 +706,16 @@ class alluvial:
                     axis=1,
                 )
                 df_cb["bottom"] = df_cb.apply(
-                    lambda row: setwise_position_df[
-                        setwise_position_df["label"] == (col_name, row["cluster_id"])
+                    lambda row: psets_vertical_ordering_df[
+                        psets_vertical_ordering_df["label"]
+                        == (col_name, row["cluster_id"])
                     ]["y_start"].values[0],
                     axis=1,
                 )
                 df_cb["top"] = df_cb.apply(
-                    lambda row: setwise_position_df[
-                        setwise_position_df["label"] == (col_name, row["cluster_id"])
+                    lambda row: psets_vertical_ordering_df[
+                        psets_vertical_ordering_df["label"]
+                        == (col_name, row["cluster_id"])
                     ]["y_end"].values[0],
                     axis=1,
                 )
@@ -734,7 +743,7 @@ class alluvial:
             df,
             skewer_params,
             col_names,
-            setwise_position_df,
+            psets_vertical_ordering_df,
             curr_selection,
             old_selection=None,
         ):
@@ -742,7 +751,7 @@ class alluvial:
                 df,
                 skewer_params,
                 col_names,
-                setwise_position_df,
+                psets_vertical_ordering_df,
                 curr_selection,
             )
 
@@ -766,8 +775,8 @@ class alluvial:
             p,
             df,
             df_filtered,
-            setwise_position_df,
-            psets_color_and_alluvial_position,
+            psets_vertical_ordering_df,
+            psets_color,
             skewer_params,
             col_names,
             curr_selection,
@@ -788,8 +797,8 @@ class alluvial:
             self.update_selection(
                 df,
                 df_filtered,
-                setwise_position_df,
-                psets_color_and_alluvial_position,
+                psets_vertical_ordering_df,
+                psets_color,
                 skewer_params,
                 col_names,
                 curr_selection,
@@ -802,8 +811,8 @@ class alluvial:
             col_names,
             color_col_name,
             width_per_count,
-            setwise_position_df,
-            psets_color_and_alluvial_position,
+            psets_vertical_ordering_df,
+            psets_color,
             bar_width,
             curr_selection,
         ):
@@ -832,13 +841,34 @@ class alluvial:
                 #     df_non_filtered[color_col_name].unique().size
                 # )
                 color_sort_order = get_color_sort_order(
-                    psets_color_and_alluvial_position, curr_selection["color_col_name"]
+                    psets_color, curr_selection["color_col_name"]
                 )
                 df_se = df_se.reset_index()
                 df_se["color_index"] = df_se.apply(
                     lambda row: color_sort_order.index(row[color_col_name]), axis=1
                 )
-                df_se = df_se.sort_values(by=["color_index", col_name_0, col_name_1])
+                df_se[col_name_0 + "_vertical_order_ref_val"] = df_se.apply(
+                    lambda row: psets_vertical_ordering_df[
+                        psets_vertical_ordering_df["label"]
+                        == (col_name_0, row[col_name_0])
+                    ]["y_start"].values[0],
+                    axis=1,
+                )
+                df_se[col_name_1 + "_vertical_order_ref_val"] = df_se.apply(
+                    lambda row: psets_vertical_ordering_df[
+                        psets_vertical_ordering_df["label"]
+                        == (col_name_1, row[col_name_1])
+                    ]["y_start"].values[0],
+                    axis=1,
+                )
+
+                df_se = df_se.sort_values(
+                    by=[
+                        "color_index",
+                        col_name_0 + "_vertical_order_ref_val",
+                        col_name_1 + "_vertical_order_ref_val",
+                    ]
+                )
                 df_se.set_index([color_col_name, col_name_0, col_name_1], inplace=True)
                 ###############################################################################################
 
@@ -866,8 +896,8 @@ class alluvial:
                 # y_start_1 = copy.deepcopy(y_start[col_id_1])
 
                 # Filter the DataFrame based on the condition
-                filtered_setwise_position_df_0 = setwise_position_df[
-                    setwise_position_df["partition_col_name"] == col_name_0
+                filtered_setwise_position_df_0 = psets_vertical_ordering_df[
+                    psets_vertical_ordering_df["partition_col_name"] == col_name_0
                 ]
                 # Create a dictionary using "partition_set_categorical_value" as keys and "y_start" as values
                 filtered_setwise_position_dict_0 = dict(
@@ -879,8 +909,8 @@ class alluvial:
                     )
                 )
                 # Filter the DataFrame based on the condition
-                filtered_setwise_position_df_1 = setwise_position_df[
-                    setwise_position_df["partition_col_name"] == col_name_1
+                filtered_setwise_position_df_1 = psets_vertical_ordering_df[
+                    psets_vertical_ordering_df["partition_col_name"] == col_name_1
                 ]
                 # Create a dictionary using "partition_set_categorical_value" as keys and "y_start" as values
                 filtered_setwise_position_dict_1 = dict(
@@ -897,8 +927,8 @@ class alluvial:
                 # print(y_start[col_id_0])
                 # print(
                 #     list(
-                #         setwise_position_df[
-                #             setwise_position_df["partition_col_name"] == col_name_0
+                #         psets_vertical_ordering_df[
+                #             psets_vertical_ordering_df["partition_col_name"] == col_name_0
                 #         ]["y_start"].values
                 #     )
                 # )
@@ -939,8 +969,8 @@ class alluvial:
             self,
             df,
             df_filtered,
-            setwise_position_df,
-            psets_color_and_alluvial_position,
+            psets_vertical_ordering_df,
+            psets_color,
             skewer_params,
             col_names,
             curr_selection,
@@ -952,8 +982,8 @@ class alluvial:
                 col_names,
                 skewer_params["color_col_name"],
                 skewer_params["width_per_count"],
-                setwise_position_df,
-                psets_color_and_alluvial_position,
+                psets_vertical_ordering_df,
+                psets_color,
                 skewer_params["bar_width"],
                 curr_selection,
             )
@@ -1169,8 +1199,8 @@ class alluvial:
         self,
         df,
         df_filtered,
-        setwise_position_df,
-        psets_color_and_alluvial_position,
+        psets_vertical_ordering_df,
+        psets_color,
         skewer_params,
         col_names,
         curr_selection,
@@ -1183,8 +1213,8 @@ class alluvial:
         self.alluvial_edges_obj.update_selection(
             df,
             df_filtered,
-            setwise_position_df,
-            psets_color_and_alluvial_position,
+            psets_vertical_ordering_df,
+            psets_color,
             skewer_params,
             col_names,
             curr_selection,
@@ -1194,7 +1224,7 @@ class alluvial:
             df,
             skewer_params,
             col_names,
-            setwise_position_df,
+            psets_vertical_ordering_df,
             curr_selection,
             old_selection,
         )
@@ -1239,7 +1269,7 @@ class cim:
         x_range,
         df,
         skewer_params,
-        psets_color_and_alluvial_position,
+        psets_color,
         col_names,
         curr_selection,
     ):
@@ -1247,12 +1277,18 @@ class cim:
         draw_vlines(self.p_normal, col_names)
         draw_vlines(self.p_inverted, col_names)
         self.draw_axis_line()
+        # self.cim_setwise_details_or_not_cbgrp = CheckboxButtonGroup(
+        #     labels=["Setwise", "Setwise"],
+        #     active=[0, 1],
+        #     orientation="vertical",
+        #     inline=True,
+        # )
         self.p_normal.yaxis.axis_label = "Overlap Measure"
         self.overlap_measure = self.cim_overlap(
             self.p_normal,
             df,
             skewer_params,
-            psets_color_and_alluvial_position,
+            psets_color,
             col_names,
             curr_selection,
         )
@@ -1271,7 +1307,7 @@ class cim:
             p,
             df,
             skewer_params,
-            psets_color_and_alluvial_position,
+            psets_color,
             col_names,
             curr_selection,
         ):
@@ -1293,7 +1329,7 @@ class cim:
                 df,
                 df,
                 skewer_params,
-                psets_color_and_alluvial_position,
+                psets_color,
                 col_names,
                 curr_selection,
             )
@@ -1303,7 +1339,7 @@ class cim:
             df_non_filtered,
             df,
             skewer_params,
-            psets_color_and_alluvial_position,
+            psets_color,
             col_names,
             wrt_col_name,
             bool_measure_only=False,
@@ -1402,9 +1438,7 @@ class cim:
 
                 ###############################################################################################
                 # (sort by color - based on the order of color from bottom to top in the selected partition)
-                color_sort_order = get_color_sort_order(
-                    psets_color_and_alluvial_position, wrt_col_name
-                )
+                color_sort_order = get_color_sort_order(psets_color, wrt_col_name)
 
                 # color_palette(
                 #     df_non_filtered[skewer_params["color_col_name"]].unique().size
@@ -1464,7 +1498,7 @@ class cim:
             df_non_filtered,
             df,
             skewer_params,
-            psets_color_and_alluvial_position,
+            psets_color,
             col_names,
             curr_selection,
             old_selection=None,
@@ -1474,7 +1508,7 @@ class cim:
                 df_non_filtered,
                 df,
                 skewer_params,
-                psets_color_and_alluvial_position,
+                psets_color,
                 col_names,
                 curr_selection["color_col_name"],
             )
@@ -1634,7 +1668,7 @@ class cim:
         df_non_filtered,
         df_filtered,
         skewer_params,
-        psets_color_and_alluvial_position,
+        psets_color,
         col_names,
         curr_selection,
         old_selection,
@@ -1643,7 +1677,7 @@ class cim:
             df_non_filtered,
             df_filtered,
             skewer_params,
-            psets_color_and_alluvial_position,
+            psets_color,
             col_names,
             curr_selection,
             old_selection,
@@ -1697,197 +1731,197 @@ class cim:
         self.p_inverted.renderers.extend([axis_line])
 
 
-class metamap_edit_dist_pt_grps:
-    def __init__(self, df, skewer_params, col_names, curr_selection):
-        self.p1 = self.generate_figure(
-            skewer_params,
-            title="Cluster Split Analysis - Left: Stable Clusters; Right: Cluster splits",
-        )
-        self.p2 = self.generate_figure(
-            skewer_params,
-            title="Clusters Pair Overlap Analysis - Left: overlapping; Right: non-overlapping",
-        )
-        self.glyph_vars = ["left", "right", "top", "bottom", "fill_color"]
-        src1 = ColumnDataSource(to_empty_dict(self.glyph_vars))
-        src2 = ColumnDataSource(to_empty_dict(self.glyph_vars))
-        self.glyph1 = self.p1.quad(
-            source=src1,
-            left="left",
-            right="right",
-            top="top",
-            bottom="bottom",
-            fill_color="fill_color",
-            line_color=None,
-            alpha=0.6,
-        )
-        self.glyph2 = self.p2.quad(
-            source=src2,
-            left="left",
-            right="right",
-            top="top",
-            bottom="bottom",
-            fill_color="fill_color",
-            line_color=None,
-            alpha=0.6,
-        )
-        self.update_selection(df, skewer_params, col_names, curr_selection)
+# class metamap_edit_dist_pt_grps:
+#     def __init__(self, df, skewer_params, col_names, curr_selection):
+#         self.p1 = self.generate_figure(
+#             skewer_params,
+#             title="Cluster Split Analysis - Left: Stable Clusters; Right: Cluster splits",
+#         )
+#         self.p2 = self.generate_figure(
+#             skewer_params,
+#             title="Clusters Pair Overlap Analysis - Left: overlapping; Right: non-overlapping",
+#         )
+#         self.glyph_vars = ["left", "right", "top", "bottom", "fill_color"]
+#         src1 = ColumnDataSource(to_empty_dict(self.glyph_vars))
+#         src2 = ColumnDataSource(to_empty_dict(self.glyph_vars))
+#         self.glyph1 = self.p1.quad(
+#             source=src1,
+#             left="left",
+#             right="right",
+#             top="top",
+#             bottom="bottom",
+#             fill_color="fill_color",
+#             line_color=None,
+#             alpha=0.6,
+#         )
+#         self.glyph2 = self.p2.quad(
+#             source=src2,
+#             left="left",
+#             right="right",
+#             top="top",
+#             bottom="bottom",
+#             fill_color="fill_color",
+#             line_color=None,
+#             alpha=0.6,
+#         )
+#         self.update_selection(df, skewer_params, col_names, curr_selection)
 
-    def generate_figure(self, skewer_params, title):
-        p = figure(
-            width=skewer_params["widthspx_ndimplot"],
-            height=skewer_params["heightspx_editdist"],
-            tools=[
-                BoxZoomTool(),
-                PanTool(),
-                WheelZoomTool(),
-                ResetTool(),
-            ],
-            title=title,
-        )
-        p.toolbar.logo = None
-        p.min_border = 0
-        p.xaxis.axis_label = "Edit distance"
-        p.yaxis.axis_label = "Data point pair count"
-        return p
+#     def generate_figure(self, skewer_params, title):
+#         p = figure(
+#             width=skewer_params["widthspx_ndimplot"],
+#             height=skewer_params["heightspx_editdist"],
+#             tools=[
+#                 BoxZoomTool(),
+#                 PanTool(),
+#                 WheelZoomTool(),
+#                 ResetTool(),
+#             ],
+#             title=title,
+#         )
+#         p.toolbar.logo = None
+#         p.min_border = 0
+#         p.xaxis.axis_label = "Edit distance"
+#         p.yaxis.axis_label = "Data point pair count"
+#         return p
 
-    def get_cds_dict(self, df, skewer_params, col_names, curr_selection):
-        df_edit_dist = df[list(col_names) + [skewer_params["color_col_name"]]].copy()
-        df_edit_dist["edit_string"] = ""
-        for col_name in col_names:
-            list_unique_vals = get_unique_vals(df_edit_dist, col_name)
-            df_edit_dist["edit_string"] = df_edit_dist.apply(
-                lambda row: row["edit_string"]
-                + chr(list_unique_vals.index(row[col_name])),
-                axis=1,
-            )
-        df_edit_dist_temp = (
-            df_edit_dist.groupby(["edit_string"])
-            .agg(
-                count=(col_name, "size"),
-                color_col_name=(curr_selection["color_col_name"], "first"),
-                fill_color=(skewer_params["color_col_name"], "first"),
-            )
-            .reset_index()
-            .rename(
-                columns={"color_col_name": curr_selection["color_col_name"]},
-                inplace=False,
-            )
-        )
-        df_edit_dist_temp["index_col"] = df_edit_dist_temp.index
-        df_edit_dist_temp.rename(
-            columns={curr_selection["color_col_name"]: "cl_id"}, inplace=True
-        )
-        df_edit_dist_temp.loc[:, "key_col"] = 1
-        df_edit_dist_temp = (
-            pd.merge(
-                df_edit_dist_temp,
-                df_edit_dist_temp,
-                on="key_col",
-                suffixes=("_1", "_2"),
-            )
-            .query("index_col_1 <= index_col_2")
-            .drop("key_col", axis=1)
-            .reset_index(drop=True)
-        )
-        df_edit_dist_temp1 = df_edit_dist_temp.query(
-            "index_col_1 == index_col_2"
-        ).copy()
-        df_edit_dist_temp2 = df_edit_dist_temp.query(
-            "index_col_1 != index_col_2"
-        ).copy()
-        df_edit_dist_temp1["edit_distance"] = 0
-        df_edit_dist_temp1["point_pair_count"] = (
-            df_edit_dist_temp1["count_1"] * (df_edit_dist_temp1["count_1"] - 1) / 2
-        )
-        df_edit_dist_temp2["edit_distance"] = df_edit_dist_temp2.apply(
-            lambda row: compute_edit_distance(
-                row["edit_string_1"], row["edit_string_2"]
-            ),
-            axis=1,
-        )
-        df_edit_dist_temp2["point_pair_count"] = (
-            df_edit_dist_temp2["count_1"] * df_edit_dist_temp2["count_2"]
-        )
-        df_edit_dist_temp = pd.concat([df_edit_dist_temp1, df_edit_dist_temp2], axis=0)
-        df_edit_dist_temp1 = df_edit_dist_temp.query("cl_id_1 == cl_id_2")[
-            ["cl_id_1", "fill_color_1", "edit_distance", "point_pair_count"]
-        ].copy()
-        df_edit_dist_temp2l = (
-            df_edit_dist_temp.query("cl_id_1 != cl_id_2")[
-                [
-                    "cl_id_1",
-                    "fill_color_1",
-                    "cl_id_2",
-                    "fill_color_2",
-                    "edit_distance",
-                    "point_pair_count",
-                ]
-            ]
-            .copy()
-            .groupby(["cl_id_1", "cl_id_2", "edit_distance"])
-            .agg(
-                n_point_pairs=("point_pair_count", "sum"),
-                fill_color_1=("fill_color_1", "first"),
-                fill_color_2=("fill_color_2", "first"),
-            )
-            .reset_index()
-            .sort_values("n_point_pairs", ascending=False)
-        )
-        df_edit_dist_temp2l["top"] = (
-            df_edit_dist_temp2l[["edit_distance", "n_point_pairs"]]
-            .groupby(["edit_distance"])
-            .cumsum()["n_point_pairs"]
-        )
-        df_edit_dist_temp2l["bottom"] = (
-            df_edit_dist_temp2l["top"] - df_edit_dist_temp2l["n_point_pairs"]
-        )
-        df_edit_dist_temp2r = df_edit_dist_temp2l.copy()
-        df_edit_dist_temp2l["left"] = df_edit_dist_temp2l["edit_distance"] - 0.4
-        df_edit_dist_temp2l["right"] = df_edit_dist_temp2l["edit_distance"]
-        df_edit_dist_temp2l["fill_color"] = df_edit_dist_temp2l["fill_color_1"]
-        df_edit_dist_temp2r["left"] = df_edit_dist_temp2r["edit_distance"]
-        df_edit_dist_temp2r["right"] = df_edit_dist_temp2r["edit_distance"] + 0.4
-        df_edit_dist_temp2r["fill_color"] = df_edit_dist_temp2r["fill_color_2"]
-        df_edit_dist_temp2 = pd.concat(
-            [df_edit_dist_temp2l, df_edit_dist_temp2r], axis=0
-        )
+#     def get_cds_dict(self, df, skewer_params, col_names, curr_selection):
+#         df_edit_dist = df[list(col_names) + [skewer_params["color_col_name"]]].copy()
+#         df_edit_dist["edit_string"] = ""
+#         for col_name in col_names:
+#             list_unique_vals = get_unique_vals(df_edit_dist, col_name)
+#             df_edit_dist["edit_string"] = df_edit_dist.apply(
+#                 lambda row: row["edit_string"]
+#                 + chr(list_unique_vals.index(row[col_name])),
+#                 axis=1,
+#             )
+#         df_edit_dist_temp = (
+#             df_edit_dist.groupby(["edit_string"])
+#             .agg(
+#                 count=(col_name, "size"),
+#                 color_col_name=(curr_selection["color_col_name"], "first"),
+#                 fill_color=(skewer_params["color_col_name"], "first"),
+#             )
+#             .reset_index()
+#             .rename(
+#                 columns={"color_col_name": curr_selection["color_col_name"]},
+#                 inplace=False,
+#             )
+#         )
+#         df_edit_dist_temp["index_col"] = df_edit_dist_temp.index
+#         df_edit_dist_temp.rename(
+#             columns={curr_selection["color_col_name"]: "cl_id"}, inplace=True
+#         )
+#         df_edit_dist_temp.loc[:, "key_col"] = 1
+#         df_edit_dist_temp = (
+#             pd.merge(
+#                 df_edit_dist_temp,
+#                 df_edit_dist_temp,
+#                 on="key_col",
+#                 suffixes=("_1", "_2"),
+#             )
+#             .query("index_col_1 <= index_col_2")
+#             .drop("key_col", axis=1)
+#             .reset_index(drop=True)
+#         )
+#         df_edit_dist_temp1 = df_edit_dist_temp.query(
+#             "index_col_1 == index_col_2"
+#         ).copy()
+#         df_edit_dist_temp2 = df_edit_dist_temp.query(
+#             "index_col_1 != index_col_2"
+#         ).copy()
+#         df_edit_dist_temp1["edit_distance"] = 0
+#         df_edit_dist_temp1["point_pair_count"] = (
+#             df_edit_dist_temp1["count_1"] * (df_edit_dist_temp1["count_1"] - 1) / 2
+#         )
+#         df_edit_dist_temp2["edit_distance"] = df_edit_dist_temp2.apply(
+#             lambda row: compute_edit_distance(
+#                 row["edit_string_1"], row["edit_string_2"]
+#             ),
+#             axis=1,
+#         )
+#         df_edit_dist_temp2["point_pair_count"] = (
+#             df_edit_dist_temp2["count_1"] * df_edit_dist_temp2["count_2"]
+#         )
+#         df_edit_dist_temp = pd.concat([df_edit_dist_temp1, df_edit_dist_temp2], axis=0)
+#         df_edit_dist_temp1 = df_edit_dist_temp.query("cl_id_1 == cl_id_2")[
+#             ["cl_id_1", "fill_color_1", "edit_distance", "point_pair_count"]
+#         ].copy()
+#         df_edit_dist_temp2l = (
+#             df_edit_dist_temp.query("cl_id_1 != cl_id_2")[
+#                 [
+#                     "cl_id_1",
+#                     "fill_color_1",
+#                     "cl_id_2",
+#                     "fill_color_2",
+#                     "edit_distance",
+#                     "point_pair_count",
+#                 ]
+#             ]
+#             .copy()
+#             .groupby(["cl_id_1", "cl_id_2", "edit_distance"])
+#             .agg(
+#                 n_point_pairs=("point_pair_count", "sum"),
+#                 fill_color_1=("fill_color_1", "first"),
+#                 fill_color_2=("fill_color_2", "first"),
+#             )
+#             .reset_index()
+#             .sort_values("n_point_pairs", ascending=False)
+#         )
+#         df_edit_dist_temp2l["top"] = (
+#             df_edit_dist_temp2l[["edit_distance", "n_point_pairs"]]
+#             .groupby(["edit_distance"])
+#             .cumsum()["n_point_pairs"]
+#         )
+#         df_edit_dist_temp2l["bottom"] = (
+#             df_edit_dist_temp2l["top"] - df_edit_dist_temp2l["n_point_pairs"]
+#         )
+#         df_edit_dist_temp2r = df_edit_dist_temp2l.copy()
+#         df_edit_dist_temp2l["left"] = df_edit_dist_temp2l["edit_distance"] - 0.4
+#         df_edit_dist_temp2l["right"] = df_edit_dist_temp2l["edit_distance"]
+#         df_edit_dist_temp2l["fill_color"] = df_edit_dist_temp2l["fill_color_1"]
+#         df_edit_dist_temp2r["left"] = df_edit_dist_temp2r["edit_distance"]
+#         df_edit_dist_temp2r["right"] = df_edit_dist_temp2r["edit_distance"] + 0.4
+#         df_edit_dist_temp2r["fill_color"] = df_edit_dist_temp2r["fill_color_2"]
+#         df_edit_dist_temp2 = pd.concat(
+#             [df_edit_dist_temp2l, df_edit_dist_temp2r], axis=0
+#         )
 
-        df_edit_dist_temp1.rename(columns={"fill_color_1": "fill_color"}, inplace=True)
-        df_edit_dist_temp1 = df_edit_dist_temp1.sort_values("cl_id_1")
-        df_edit_dist_temp1 = (
-            df_edit_dist_temp1.groupby(["cl_id_1", "edit_distance"])
-            .agg(
-                n_point_pairs=("point_pair_count", "sum"),
-                fill_color=("fill_color", "first"),
-            )
-            .reset_index()
-        )
-        df_edit_dist_temp1["left"] = df_edit_dist_temp1["edit_distance"] - 0.4
-        df_edit_dist_temp1["right"] = df_edit_dist_temp1["edit_distance"] + 0.4
-        df_edit_dist_temp1["top"] = (
-            df_edit_dist_temp1[["edit_distance", "n_point_pairs"]]
-            .groupby(["edit_distance"])
-            .cumsum()["n_point_pairs"]
-        )
-        df_edit_dist_temp1["bottom"] = (
-            df_edit_dist_temp1["top"] - df_edit_dist_temp1["n_point_pairs"]
-        )
+#         df_edit_dist_temp1.rename(columns={"fill_color_1": "fill_color"}, inplace=True)
+#         df_edit_dist_temp1 = df_edit_dist_temp1.sort_values("cl_id_1")
+#         df_edit_dist_temp1 = (
+#             df_edit_dist_temp1.groupby(["cl_id_1", "edit_distance"])
+#             .agg(
+#                 n_point_pairs=("point_pair_count", "sum"),
+#                 fill_color=("fill_color", "first"),
+#             )
+#             .reset_index()
+#         )
+#         df_edit_dist_temp1["left"] = df_edit_dist_temp1["edit_distance"] - 0.4
+#         df_edit_dist_temp1["right"] = df_edit_dist_temp1["edit_distance"] + 0.4
+#         df_edit_dist_temp1["top"] = (
+#             df_edit_dist_temp1[["edit_distance", "n_point_pairs"]]
+#             .groupby(["edit_distance"])
+#             .cumsum()["n_point_pairs"]
+#         )
+#         df_edit_dist_temp1["bottom"] = (
+#             df_edit_dist_temp1["top"] - df_edit_dist_temp1["n_point_pairs"]
+#         )
 
-        return df_edit_dist_temp1[self.glyph_vars].to_dict("list"), df_edit_dist_temp2[
-            self.glyph_vars
-        ].to_dict("list")
+#         return df_edit_dist_temp1[self.glyph_vars].to_dict("list"), df_edit_dist_temp2[
+#             self.glyph_vars
+#         ].to_dict("list")
 
-    def update_selection(
-        self, df, skewer_params, col_names, curr_selection, old_selection=None
-    ):
-        return  # for faster execution, leave this vis out
-        timer_obj = timer("Updating Meta-Map Edit distance")
-        cds_dict1, cds_dict2 = self.get_cds_dict(
-            df, skewer_params, col_names, curr_selection
-        )
-        self.glyph1.data_source.data = cds_dict1
-        self.glyph2.data_source.data = cds_dict2
-        timer_obj.done()
+#     def update_selection(
+#         self, df, skewer_params, col_names, curr_selection, old_selection=None
+#     ):
+#         return  # for faster execution, leave this vis out
+#         timer_obj = timer("Updating Meta-Map Edit distance")
+#         cds_dict1, cds_dict2 = self.get_cds_dict(
+#             df, skewer_params, col_names, curr_selection
+#         )
+#         self.glyph1.data_source.data = cds_dict1
+#         self.glyph2.data_source.data = cds_dict2
+#         timer_obj.done()
 
 
 class ndimplot:

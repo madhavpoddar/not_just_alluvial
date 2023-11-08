@@ -13,14 +13,13 @@ def set_initial_curr_selection(col_names):
     }
 
 
-def calc_index_cid_clicked(event, col_names, y_start, setwise_position_df):
+def calc_index_cid_clicked(event, col_names, psets_vertical_ordering_df):
     index = round(event.x)
     if index in range(len(col_names)):
         c_id_index = -1
-        col_name_filtered_setwise_position_df = setwise_position_df[
-            setwise_position_df["partition_col_name"] == col_names[index]
+        col_name_filtered_setwise_position_df = psets_vertical_ordering_df[
+            psets_vertical_ordering_df["partition_col_name"] == col_names[index]
         ]
-        print(col_name_filtered_setwise_position_df)
         y_starts = col_name_filtered_setwise_position_df["y_start"].values
         for i in range(len(y_starts)):
             if i == len(y_starts) - 1:
@@ -32,12 +31,6 @@ def calc_index_cid_clicked(event, col_names, y_start, setwise_position_df):
                     c_id_index = i
                     break
         if c_id_index != -1:
-            print("i=", i)
-            print(
-                col_name_filtered_setwise_position_df[
-                    "partition_set_categorical_value"
-                ].iloc[i]
-            )
             return (
                 index,
                 col_name_filtered_setwise_position_df[
@@ -47,7 +40,7 @@ def calc_index_cid_clicked(event, col_names, y_start, setwise_position_df):
     return None, None
 
 
-def calc_curr_selection(event, old_selection, y_start, setwise_position_df, col_names):
+def calc_curr_selection(event, old_selection, psets_vertical_ordering_df, col_names):
     curr_selection = copy.deepcopy(old_selection)
     if event.y < 0:
         # Unselect existing curr_selection circle
@@ -62,7 +55,7 @@ def calc_curr_selection(event, old_selection, y_start, setwise_position_df, col_
             curr_selection["color_col_name"] = None
     else:
         cs_col_id, cs_cluster_id = calc_index_cid_clicked(
-            event, col_names, y_start, setwise_position_df
+            event, col_names, psets_vertical_ordering_df
         )
         if cs_col_id == None:
             return curr_selection
@@ -83,7 +76,7 @@ def calc_curr_selection(event, old_selection, y_start, setwise_position_df, col_
 
 def df_assign_colors(
     df,
-    psets_color_and_alluvial_position,
+    psets_color,
     selected_partition_col_name,
     color_col_name,
     remove_colors=False,
@@ -92,10 +85,10 @@ def df_assign_colors(
         df.loc[:, color_col_name] = "gray"
     else:
         # unique_vals = get_unique_vals(df, selected_partition_col_name)
-        # print(psets_color_and_alluvial_position)
+        # print(psets_color)
         # for unique_val in unique_vals:
         #     print(
-        #         psets_color_and_alluvial_position[
+        #         psets_color[
         #             (selected_partition_col_name, unique_val)
         #         ]
         #     )
@@ -108,7 +101,7 @@ def df_assign_colors(
         # )
 
         df[color_col_name] = df.apply(
-            lambda row: psets_color_and_alluvial_position[
+            lambda row: psets_color[
                 (selected_partition_col_name, row[selected_partition_col_name])
             ],
             axis=1,
@@ -134,14 +127,14 @@ def selection_update_tap(
     df,
     fig_obj,
     col_names,
-    setwise_position_df,
-    psets_color_and_alluvial_position,
+    psets_vertical_ordering_df,
+    psets_color,
     skewer_params,
 ):
     # assign colors based on unique values of color_col_name
     df_assign_colors(
         df,
-        psets_color_and_alluvial_position,
+        psets_color,
         curr_selection["color_col_name"],
         skewer_params["color_col_name"],
         remove_colors=len(curr_selection["cluster_ids"]) == 0
@@ -152,8 +145,8 @@ def selection_update_tap(
     fig_obj["alluvial"].update_selection(
         df,
         df_filtered,
-        setwise_position_df,
-        psets_color_and_alluvial_position,
+        psets_vertical_ordering_df,
+        psets_color,
         skewer_params,
         col_names,
         curr_selection,
@@ -163,14 +156,14 @@ def selection_update_tap(
         df,
         df_filtered,
         skewer_params,
-        psets_color_and_alluvial_position,
+        psets_color,
         col_names,
         curr_selection,
         old_selection,
     )
-    fig_obj["metamap_edit_dist"].update_selection(
-        df_filtered, skewer_params, col_names, curr_selection, old_selection
-    )
+    # fig_obj["metamap_edit_dist"].update_selection(
+    #     df_filtered, skewer_params, col_names, curr_selection, old_selection
+    # )
     fig_obj["ndimplot"].update_selection(
         df_filtered, skewer_params, col_names, curr_selection, old_selection
     )
@@ -183,7 +176,7 @@ def selection_update_tap(
 #     df,
 #     fig_obj,
 #     col_names,
-#     setwise_position_df,
+#     psets_vertical_ordering_df,
 #     skewer_params,
 # ):
 #     selection_update_double_tap(
@@ -192,6 +185,6 @@ def selection_update_tap(
 #         df,
 #         fig_obj,
 #         col_names,
-#         setwise_position_df,
+#         psets_vertical_ordering_df,
 #         skewer_params,
 #     )

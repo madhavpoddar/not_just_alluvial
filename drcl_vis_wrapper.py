@@ -8,13 +8,11 @@ import pandas as pd
 
 from df_preprocessing import (
     reduce_intersections_neighbours,
-    calc_alluvial_bar_params,
     calc_FMI_matrix,
 )
 from draw_vis import (
     alluvial,
     cim,
-    metamap_edit_dist_pt_grps,
     ndimplot,
     mds_col_similarity_cl_membership,
     similarity_roof_shaped_matrix_diagram,
@@ -72,9 +70,6 @@ class drcl_vis_wrapper:
         column_details_df = pd.DataFrame(
             {sequential_variable_name: col_names_as_list_of_numbers}, index=col_names
         )
-
-        print(column_details_df)
-
         self.col_names = column_names(col_names)
 
         if bool_reduce_intersections_neighbours:
@@ -102,18 +97,13 @@ class drcl_vis_wrapper:
         self.curr_selection = set_initial_curr_selection(self.col_names)
 
         (
-            self.count_0_1,
-            self.y_start,
-        ) = calc_alluvial_bar_params(self.df, self.col_names)
-
-        (
-            self.psets_color_and_alluvial_position,
-            self.setwise_position_df,
+            self.psets_color,
+            self.psets_vertical_ordering_df,
         ) = get_setwise_color_allocation(self.df[self.col_names])
 
         df_assign_colors(
             self.df,
-            self.psets_color_and_alluvial_position,
+            self.psets_color,
             self.curr_selection["color_col_name"],
             self.skewer_params["color_col_name"],
             remove_colors=len(self.curr_selection["cluster_ids"]) == 0
@@ -124,8 +114,8 @@ class drcl_vis_wrapper:
         self.fig_obj["alluvial"] = alluvial(
             self.df,
             column_details_df,
-            self.setwise_position_df,
-            self.psets_color_and_alluvial_position,
+            self.psets_vertical_ordering_df,
+            self.psets_color,
             self.skewer_params,
             self.col_names,
             self.curr_selection,
@@ -134,16 +124,16 @@ class drcl_vis_wrapper:
             self.fig_obj["alluvial"].p.x_range,
             self.df,
             self.skewer_params,
-            self.psets_color_and_alluvial_position,
+            self.psets_color,
             self.col_names,
             self.curr_selection,
         )
-        self.fig_obj["metamap_edit_dist"] = metamap_edit_dist_pt_grps(
-            self.df,
-            self.skewer_params,
-            self.col_names,
-            self.curr_selection,
-        )
+        # self.fig_obj["metamap_edit_dist"] = metamap_edit_dist_pt_grps(
+        #     self.df,
+        #     self.skewer_params,
+        #     self.col_names,
+        #     self.curr_selection,
+        # )
         self.fig_obj["ndimplot"] = ndimplot(
             self.df,
             self.skewer_params,
@@ -187,20 +177,22 @@ class drcl_vis_wrapper:
                 self.fig_obj["ndimplot"].multichoice_cols,
             ]
         )
-        l00b = column(
-            children=[
-                self.fig_obj["metamap_edit_dist"].p1,
-                self.fig_obj["metamap_edit_dist"].p2,
-            ]
-        )
+        # l00b = column(
+        #     children=[
+        #         self.fig_obj["metamap_edit_dist"].p1,
+        #         self.fig_obj["metamap_edit_dist"].p2,
+        #     ]
+        # )
         l01a = column(
             children=[
                 self.fig_obj["alluvial"].rbg_edge_alpha_highlight,
                 self.fig_obj["alluvial"].p,
                 self.fig_obj["cim"].p_normal,
                 self.fig_obj["cim"].p_inverted,
+                # self.fig_obj["cim"].cim_setwise_details_or_not_cbgrp,
             ]
         )
+
         # l01b = self.empty_fig0
         # l01c = row(
         #     children=[
@@ -248,7 +240,7 @@ class drcl_vis_wrapper:
     def tap_callback(self, event):
         old_selection = copy.deepcopy(self.curr_selection)
         self.curr_selection = calc_curr_selection(
-            event, old_selection, self.y_start, self.setwise_position_df, self.col_names
+            event, old_selection, self.psets_vertical_ordering_df, self.col_names
         )
         print("Current selection: " + str(self.curr_selection))
         self.df, self.df_filtered = selection_update_tap(
@@ -257,8 +249,8 @@ class drcl_vis_wrapper:
             self.df,
             self.fig_obj,
             self.col_names,
-            self.setwise_position_df,
-            self.psets_color_and_alluvial_position,
+            self.psets_vertical_ordering_df,
+            self.psets_color,
             self.skewer_params,
         )
 
@@ -279,8 +271,8 @@ class drcl_vis_wrapper:
         self.fig_obj["alluvial"].alluvial_edges_obj.update_selection(
             self.df,
             self.df_filtered,
-            self.setwise_position_df,
-            self.psets_color_and_alluvial_position,
+            self.psets_vertical_ordering_df,
+            self.psets_color,
             self.skewer_params,
             self.col_names,
             self.curr_selection,
