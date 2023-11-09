@@ -29,7 +29,8 @@ drcl_vis = drcl_vis_wrapper(
 # df = read_csv_file("InVS15_8clusters.csv")
 # df = read_csv_file("SFHH_8clusters.csv")
 # col_names = ["time_"+str(i) for i in range(len(df.columns)-2)]
+# df = read_csv_file("titanic_categorical.csv")
+# col_names = ['Survived', 'Pclass', 'Sex', 'Age', 'SibSp', 'Parch', 'Fare', 'Embarked']
 # drcl_vis = drcl_vis_wrapper(df, col_names)
-
 
 curdoc().add_root(drcl_vis.layout)
