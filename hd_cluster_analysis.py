@@ -25,18 +25,10 @@ drcl_vis = drcl_vis_wrapper(
 )
 
 
+# df = read_csv_file("InVS13_8clusters.csv")
 # df = read_csv_file("InVS15_8clusters.csv")
-# # df = read_csv_file("SFHH_8clusters.csv")
-# col_names = [
-#     "clustering0",
-#     "clustering1",
-#     "clustering2",
-#     "clustering3",
-#     "clustering4",
-#     "clustering5",
-#     "clustering6",
-#     "clustering7",
-# ]
+# df = read_csv_file("SFHH_8clusters.csv")
+# col_names = ["time_"+str(i) for i in range(len(df.columns)-2)]
 # drcl_vis = drcl_vis_wrapper(df, col_names)
 
 
