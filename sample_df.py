@@ -119,7 +119,7 @@ def get_sample_df(which_data: str = "MNIST_DiffDim_KMeans25"):
             n_features=2,
             random_state=1,
         )
-        moons = make_moons(n_samples=1000, noise=0.05)
+        moons = make_moons(n_samples=1000, noise=0.05, random_state=19)
         data_2d = np.concatenate((blobs[0], moons[0]), axis=0)
         x = data_2d[:, 0]
         y = data_2d[:, 1]

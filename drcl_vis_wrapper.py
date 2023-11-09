@@ -15,7 +15,8 @@ from draw_vis import (
     cim,
     ndimplot,
     mds_col_similarity_cl_membership,
-    similarity_roof_shaped_matrix_diagram,
+    mds_nxn_setwise,
+    # similarity_roof_shaped_matrix_diagram,
 )
 from vis_interaction import (
     calc_curr_selection,
@@ -147,13 +148,16 @@ class drcl_vis_wrapper:
             self.col_names,
             1 - calc_FMI_matrix(self.df, self.col_names),
         )
-        self.fig_obj[
-            "similarity_roof_shaped_matrix_diagram"
-        ] = similarity_roof_shaped_matrix_diagram(
-            self.skewer_params,
-            self.col_names,
-            1 - calc_FMI_matrix(self.df, self.col_names),
+        self.fig_obj["mds_nxn_setwise"] = mds_nxn_setwise(
+            self.skewer_params, self.col_names, self.psets_vertical_ordering_df
         )
+        # self.fig_obj[
+        #     "similarity_roof_shaped_matrix_diagram"
+        # ] = similarity_roof_shaped_matrix_diagram(
+        #     self.skewer_params,
+        #     self.col_names,
+        #     1 - calc_FMI_matrix(self.df, self.col_names),
+        # )
 
         self.fig_obj["alluvial"].rbg_edge_alpha_highlight.on_change(
             "active", self.rbg_alluvial_edge_alpha_highlight_handler
@@ -214,7 +218,10 @@ class drcl_vis_wrapper:
         # Columns (Dis-)similarity based on Cluster-Membership
         panel_1x1x1_1xn = TabPanel(child=l01a, title="Sequential Comparison")
         # l01b_panel = TabPanel(child=l01b, title="1xN Comparison")
-        panel_nxn = TabPanel(child=l01c, title="NxN Comparison")
+        panel_nxn = TabPanel(child=l01c, title="NxN Comparison (Partion)")
+        panel_nxn_setwise = TabPanel(
+            child=self.fig_obj["mds_nxn_setwise"].p, title="NxN Comparison (Set)"
+        )
         # Cluster Positioning (Estimated??)
         # l02a_panel = TabPanel(child=l02, title="Cluster Positions*")
         # l02b_panel = TabPanel(child=l02, title="Pt. Trails*")
@@ -223,7 +230,7 @@ class drcl_vis_wrapper:
 
         tabs_1x1x1_1xn = Tabs(tabs=[panel_1x1x1_1xn])
         tabs_data_space_view = Tabs(tabs=[data_space_view_panel])
-        tabs_nxn = Tabs(tabs=[panel_nxn])
+        tabs_nxn = Tabs(tabs=[panel_nxn, panel_nxn_setwise])
         # tabs_l10 = Tabs(tabs=[l10b_panel])
         # tabs_l02 = Tabs(tabs=[l02a_panel, l02b_panel])
         # tabs_l12 = Tabs(tabs=[l12a_panel])

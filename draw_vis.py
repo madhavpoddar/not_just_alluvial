@@ -25,6 +25,7 @@ from bokeh.models import (
     LassoSelectTool,
     Circle,
     LinearAxis,
+    BoxAnnotation,
 )
 import random
 from vis_params import color_palette
@@ -516,6 +517,8 @@ class alluvial:
             col_names,
             curr_selection,
         ):
+            if curr_selection["color_col_name"] == None:
+                return to_empty_dict(self.glyph_vars)
             center_x = number_line_df.loc[curr_selection["color_col_name"]][
                 skewer_params["random_tag"] + "_nl_ellipse_center_xs"
             ]
@@ -652,7 +655,15 @@ class alluvial:
             psets_vertical_ordering_df,
             curr_selection,
         ):
-            self.glyph_vars = ["left", "right", "top", "bottom", "line_color"]
+            self.glyph_vars = [
+                "left",
+                "right",
+                "top",
+                "bottom",
+                "line_color",
+                "fill_color",
+                "fill_alpha",
+            ]
             src = ColumnDataSource(to_empty_dict(self.glyph_vars))
             self.glyph = p.quad(
                 source=src,
@@ -662,8 +673,8 @@ class alluvial:
                 bottom="bottom",
                 line_width=1,
                 line_color="line_color",
-                fill_color="gray",
-                fill_alpha=0.25,
+                fill_color="fill_color",
+                fill_alpha="fill_alpha",
                 level="overlay",
             )
             self.update_selection(
@@ -701,7 +712,12 @@ class alluvial:
                 )
                 df_cb["line_color"] = df_cb.apply(
                     lambda row: self.get_line_color(
-                        df, skewer_params, curr_selection, col_name, row["cluster_id"]
+                        df,
+                        skewer_params,
+                        psets_vertical_ordering_df,
+                        curr_selection,
+                        col_name,
+                        row["cluster_id"],
                     ),
                     axis=1,
                 )
@@ -719,6 +735,12 @@ class alluvial:
                     ]["y_end"].values[0],
                     axis=1,
                 )
+                if curr_selection["color_col_name"] == None:
+                    df_cb["fill_color"] = df_cb["line_color"]
+                    df_cb["fill_alpha"] = 0.5
+                else:
+                    df_cb["fill_color"] = "gray"
+                    df_cb["fill_alpha"] = 0.2
                 # print(df_cb)
                 # if len(df_cb.index) < 2:
                 #     df_cb["bottom"] = 0
@@ -756,17 +778,30 @@ class alluvial:
             )
 
         def get_line_color(
-            self, df, skewer_params, curr_selection, col_name, cluster_id
+            self,
+            df,
+            skewer_params,
+            psets_vertical_ordering_df,
+            curr_selection,
+            col_name,
+            cluster_id,
         ):
-            if col_name != curr_selection["color_col_name"]:
+            if (
+                col_name != curr_selection["color_col_name"]
+                and curr_selection["color_col_name"] != None
+            ):
                 return skewer_params["cluster_bars_default_line_color"]
             if (
                 len(curr_selection["cluster_ids"]) == 0
                 or cluster_id in curr_selection["cluster_ids"]
-            ):
+            ) and curr_selection["color_col_name"] != None:
                 return (df[df[col_name] == cluster_id].iloc[0])[
                     skewer_params["color_col_name"]
                 ]
+            if curr_selection["color_col_name"] == None:
+                return psets_vertical_ordering_df[
+                    psets_vertical_ordering_df["label"] == (col_name, cluster_id)
+                ]["color"].values[0]
             return skewer_params["cluster_bars_filtered_out_line_color"]
 
     class alluvial_edges:
@@ -840,13 +875,18 @@ class alluvial:
                 # color_sort_order = color_palette(
                 #     df_non_filtered[color_col_name].unique().size
                 # )
-                color_sort_order = get_color_sort_order(
-                    psets_color, curr_selection["color_col_name"]
-                )
-                df_se = df_se.reset_index()
-                df_se["color_index"] = df_se.apply(
-                    lambda row: color_sort_order.index(row[color_col_name]), axis=1
-                )
+                if curr_selection["color_col_name"] != None:
+                    color_sort_order = get_color_sort_order(
+                        psets_color, curr_selection["color_col_name"]
+                    )
+                    df_se = df_se.reset_index()
+                    df_se["color_index"] = df_se.apply(
+                        lambda row: color_sort_order.index(row[color_col_name]), axis=1
+                    )
+                else:
+                    df_se = df_se.reset_index()
+                    df_se["color_index"] = 0
+
                 df_se[col_name_0 + "_vertical_order_ref_val"] = df_se.apply(
                     lambda row: psets_vertical_ordering_df[
                         psets_vertical_ordering_df["label"]
@@ -1286,6 +1326,7 @@ class cim:
         self.p_normal.yaxis.axis_label = "Overlap Measure"
         self.overlap_measure = self.cim_overlap(
             self.p_normal,
+            x_range,
             df,
             skewer_params,
             psets_color,
@@ -1305,12 +1346,26 @@ class cim:
         def __init__(
             self,
             p,
+            x_range,
             df,
             skewer_params,
             psets_color,
             col_names,
             curr_selection,
         ):
+            self.background_glyph_vars = ["top", "bottom", "fill_color"]
+            background_src = ColumnDataSource(to_empty_dict(self.background_glyph_vars))
+            self.background_glyph = p.quad(
+                source=background_src,
+                top="top",
+                bottom="bottom",
+                left=-0.5,
+                right=len(col_names) - 0.5,
+                fill_color="fill_color",
+                fill_alpha=0.15,
+                line_width=0,
+                # line_color=None,
+            )
             self.glyph_vars = ["left", "right", "top", "bottom", "fill_color"]
             src = ColumnDataSource(to_empty_dict(self.glyph_vars))
             self.glyph = p.quad(
@@ -1346,7 +1401,9 @@ class cim:
         ):
             if not bool_measure_only:
                 if wrt_col_name == None:
-                    return to_empty_dict(self.glyph_vars)
+                    return to_empty_dict(self.glyph_vars), to_empty_dict(
+                        self.background_glyph_vars
+                    )
                 df_cim_overlap_combined = None
             else:
                 if wrt_col_name == None:
@@ -1440,9 +1497,6 @@ class cim:
                 # (sort by color - based on the order of color from bottom to top in the selected partition)
                 color_sort_order = get_color_sort_order(psets_color, wrt_col_name)
 
-                # color_palette(
-                #     df_non_filtered[skewer_params["color_col_name"]].unique().size
-                # )
                 df_cim_overlap_temp = df_cim_overlap_temp.reset_index()
                 df_cim_overlap_temp["color_index"] = df_cim_overlap_temp.apply(
                     lambda row: color_sort_order.index(row["fill_color"]),
@@ -1485,13 +1539,21 @@ class cim:
 
                 if not isinstance(df_cim_overlap_combined, pd.DataFrame):
                     df_cim_overlap_combined = df_cim_overlap
+                    df_cim_overlap_background = copy.deepcopy(
+                        df_cim_overlap[["fill_color", "bottom"]]
+                    )
+                    background_top_list = list(df_cim_overlap["bottom"])[1:]
+                    background_top_list.append(1)
+                    df_cim_overlap_background["top"] = background_top_list
                 else:
                     df_cim_overlap_combined = pd.concat(
                         [df_cim_overlap_combined, df_cim_overlap], ignore_index=True
                     )
             if bool_measure_only:
                 return dissimilarity_dict
-            return df_cim_overlap_combined[self.glyph_vars].to_dict("list")
+            return df_cim_overlap_combined[self.glyph_vars].to_dict(
+                "list"
+            ), df_cim_overlap_background[self.background_glyph_vars].to_dict("list")
 
         def update_selection(
             self,
@@ -1504,7 +1566,10 @@ class cim:
             old_selection=None,
         ):
             timer_obj = timer("Updating CIM Overlap")
-            self.glyph.data_source.data = self.get_cds_dict(
+            (
+                self.glyph.data_source.data,
+                self.background_glyph.data_source.data,
+            ) = self.get_cds_dict(
                 df_non_filtered,
                 df,
                 skewer_params,
@@ -1707,6 +1772,12 @@ class cim:
         p.outline_line_color = None
         p.min_border = 0
         p.xaxis.major_label_text_font_size = "0pt"
+        p.x_range.range_padding = 0
+        # p.xgrid.grid_line_color = None
+        p.ygrid.visible = False
+        p.yaxis.major_label_text_font_size = "0pt"
+        p.yaxis.major_tick_line_color = None  # turn off y-axis major ticks
+        p.yaxis.minor_tick_line_color = None  # turn off y-axis minor ticks
         return p
 
     def generate_figures(self, x_range, skewer_params):
@@ -2265,6 +2336,125 @@ class mds_col_similarity_cl_membership:
         )
         p.toolbar.logo = None
         p.min_border = 0
+        return p
+
+
+class mds_nxn_setwise:
+    def __init__(self, skewer_params, col_names, psets_vertical_ordering_df):
+        self.p = self.generate_figure(skewer_params)
+        self.glyph_vars = ["x", "y", "color", "label"]
+        self.glyph_vars_line = ["x1", "y1", "x2", "y2"]
+        src = ColumnDataSource(to_empty_dict(self.glyph_vars))
+        src_line = ColumnDataSource(to_empty_dict(self.glyph_vars_line))
+        self.glyph_line = self.p.segment(
+            source=src_line,
+            x0="x1",
+            y0="y1",
+            x1="x2",
+            y1="y2",
+            line_color="silver",
+            line_width=1,
+        )
+        self.glyph = self.p.circle(source=src, x="x", y="y", alpha=1, color="color")
+        # labels = LabelSet(
+        #     source=src,
+        #     x="x",
+        #     y="y",
+        #     text="label",
+        #     x_offset=1,
+        #     y_offset=1,
+        #     level="underlay",
+        # )
+        # self.p.add_layout(labels)
+        self.update_selection(
+            skewer_params,
+            col_names,
+            psets_vertical_ordering_df,
+        )
+
+    def get_cds_dict(self, psets_vertical_ordering_df, col_names):
+        df_scatterplot = psets_vertical_ordering_df
+        # df_scatterplot["col_name"] = list(col_names)
+
+        # # Create two DataFrames with shifted rows
+        # df_shifted = df_scatterplot.shift(-1)  # Shifted one row up
+
+        # # Filter out the last row which contains NaN due to shifting
+        # df_shifted = df_shifted.dropna()
+
+        # # Create a new DataFrame manually with consecutive connections
+        # new_df = pd.DataFrame({
+        #     'x1': df_scatterplot['x'].values[:-1],  # All rows except the last one
+        #     'y1': df_scatterplot['y'].values[:-1],
+        #     'x2': df_shifted['x'].values,  # All rows except the last one, shifted one position up
+        #     'y2': df_shifted['y'].values
+        # })
+
+        # # Reset the index if desired
+        # new_df.reset_index(drop=True, inplace=True)
+
+        return df_scatterplot[self.glyph_vars].to_dict("list")
+
+    # def get_cds_dict2(self, dissimilarity_np, col_names):
+    #     pos = (
+    #         MDS(
+    #             random_state=4,
+    #             eps=1e-9,
+    #             max_iter=10000,
+    #             dissimilarity="precomputed",
+    #             normalized_stress="auto",
+    #         )
+    #         .fit(dissimilarity_np)
+    #         .embedding_
+    #     )
+    #     df_scatterplot = pd.DataFrame(pos, columns=["x", "y"])
+    #     df_scatterplot["color"] = "black"
+    #     df_scatterplot["col_name"] = list(col_names)
+
+    #     # Create two DataFrames with shifted rows
+    #     df_shifted = df_scatterplot.shift(-1)  # Shifted one row up
+
+    #     # Filter out the last row which contains NaN due to shifting
+    #     df_shifted = df_shifted.dropna()
+
+    #     # Create a new DataFrame manually with consecutive connections
+    #     new_df = pd.DataFrame(
+    #         {
+    #             "x1": df_scatterplot["x"].values[:-1],  # All rows except the last one
+    #             "y1": df_scatterplot["y"].values[:-1],
+    #             "x2": df_shifted[
+    #                 "x"
+    #             ].values,  # All rows except the last one, shifted one position up
+    #             "y2": df_shifted["y"].values,
+    #         }
+    #     )
+
+    #     # Reset the index if desired
+    #     new_df.reset_index(drop=True, inplace=True)
+
+    #     return new_df[self.glyph_vars_line].to_dict("list")
+
+    def update_selection(self, skewer_params, col_names, psets_vertical_ordering_df):
+        timer_obj = timer("Updating Scatterplot")
+        self.glyph.data_source.data = self.get_cds_dict(
+            psets_vertical_ordering_df, col_names
+        )
+        # self.glyph_line.data_source.data = self.get_cds_dict2(
+        #     dissimilarity_np, col_names
+        # )
+        timer_obj.done()
+
+    def generate_figure(self, skewer_params):
+        p = figure(
+            width=skewer_params["widthspx_mds_col_similarity_cl_membership"],
+            height=skewer_params["heightspx_mds_col_similarity_cl_membership"],
+            tools="pan,wheel_zoom,box_zoom,reset",
+            match_aspect=True,
+        )
+        p.toolbar.logo = None
+        p.min_border = 0
+        p.xaxis.major_label_text_font_size = "0pt"  # turn off x-axis tick labels
+        p.yaxis.major_label_text_font_size = "0pt"  # turn off y-axis tick labels
         return p
 
 

@@ -78,8 +78,11 @@ def get_setwise_color_allocation(df):
         dissimilarity="precomputed",
         random_state=19,
         normalized_stress="auto",
+        max_iter=10000,
+        eps=1e-9,
     )
     projection = mds.fit_transform(dissimilarity_matrix)
+
     # Create a DataFrame for the projection data
     projection_df = pd.DataFrame({"x": projection[:, 0], "y": projection[:, 1]})
     projection_df["label"] = list(row_indexes.keys())
@@ -93,19 +96,24 @@ def get_setwise_color_allocation(df):
     #####################################################################################################
     # 1D MDS projection of sets for sequencing of sets within individual partitions
     #####################################################################################################
-    # Compute a 1D projection using MDS
-    mds = MDS(
-        n_components=1,
-        dissimilarity="precomputed",
-        random_state=19,
-        normalized_stress="auto",
-    )
-    projection = mds.fit_transform(dissimilarity_matrix)
+    # # Compute a 1D projection using MDS
+    # mds = MDS(
+    #     n_components=1,
+    #     dissimilarity="precomputed",
+    #     random_state=19,
+    #     normalized_stress="auto",
+    # )
+    # projection = mds.fit_transform(dissimilarity_matrix)
     # tsne = TSNE(n_components=1, random_state=19)
     # projection = tsne.fit_transform(projection)
 
-    # Add the projection data to the projection df
-    projection_df["1D_proj"] = projection[:, 0]
+    # # Create a PCA instance with one component
+    # pca = PCA(n_components=1)
+    # # Fit the PCA on the MDS projection
+    # pca_component = pca.fit_transform(projection)
+
+    # # Add the projection data to the projection df
+    # projection_df["1D_proj"] = projection[:, 0]
 
     spacing_ratio = 0.5
     width_per_count = (1 - spacing_ratio) / len(df.index)
@@ -168,16 +176,7 @@ def get_setwise_color_allocation(df):
     # Returning dict with key: (Column Name, Unique Categorical Value), value: color
     #####################################################################################################
     label_color_dict = dict(zip(projection_df["label"], projection_df["color"]))
-    psets_vertical_ordering_df = projection_df[
-        [
-            "label",
-            "partition_col_name",
-            "partition_set_categorical_value",
-            "width",
-            "y_start",
-            "y_end",
-        ]
-    ]
+    psets_vertical_ordering_df = projection_df
     return label_color_dict, psets_vertical_ordering_df
 
 
