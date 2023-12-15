@@ -2343,19 +2343,24 @@ class mds_nxn_setwise:
     def __init__(self, skewer_params, col_names, psets_vertical_ordering_df):
         self.p = self.generate_figure(skewer_params)
         self.glyph_vars = ["x", "y", "color", "label"]
-        self.glyph_vars_line = ["x1", "y1", "x2", "y2"]
+        self.glyph_vars_wedge = ["x", "y", "color", "start_angle", "end_angle"]
+        # self.glyph_vars_line = ["x1", "y1", "x2", "y2"]
         src = ColumnDataSource(to_empty_dict(self.glyph_vars))
-        src_line = ColumnDataSource(to_empty_dict(self.glyph_vars_line))
-        self.glyph_line = self.p.segment(
-            source=src_line,
-            x0="x1",
-            y0="y1",
-            x1="x2",
-            y1="y2",
-            line_color="silver",
-            line_width=1,
+        src_wedge = ColumnDataSource(to_empty_dict(self.glyph_vars_wedge))
+        self.glyph_wedge = self.p.wedge(
+            source=src,
+            x="x",
+            y="y",
+            radius=0.05,
+            fill_color="color",
+            line_width=0,
+            fill_alpha=0.2,
+            start_angle="start_angle",
+            end_angle="end_angle",
         )
-        self.glyph = self.p.circle(source=src, x="x", y="y", alpha=1, color="color")
+        self.glyph = self.p.circle(
+            source=src_wedge, x="x", y="y", alpha=1, color="color"
+        )
         # labels = LabelSet(
         #     source=src,
         #     x="x",
@@ -2394,6 +2399,31 @@ class mds_nxn_setwise:
         # new_df.reset_index(drop=True, inplace=True)
 
         return df_scatterplot[self.glyph_vars].to_dict("list")
+
+    def get_cds_dict_wedge(self, psets_vertical_ordering_df, col_names):
+        # df_scatterplot = psets_vertical_ordering_df
+        df_scatterplot_wedge = copy.deepcopy(psets_vertical_ordering_df)
+
+        # print(psets_vertical_ordering_df)
+        df_scatterplot_wedge["start_angle"] = df_scatterplot_wedge.apply(
+            lambda row: (
+                col_names.index(row["partition_col_name"]) * 2 * np.pi / len(col_names)
+            )
+            + np.pi / 2,
+            axis=1,
+        )
+        df_scatterplot_wedge["end_angle"] = df_scatterplot_wedge.apply(
+            lambda row: (
+                (col_names.index(row["partition_col_name"]) + 1)
+                * 2
+                * np.pi
+                / len(col_names)
+            )
+            + np.pi / 2,
+            axis=1,
+        )
+        print(df_scatterplot_wedge)
+        return df_scatterplot_wedge[self.glyph_vars_wedge].to_dict("list")
 
     # def get_cds_dict2(self, dissimilarity_np, col_names):
     #     pos = (
@@ -2439,9 +2469,9 @@ class mds_nxn_setwise:
         self.glyph.data_source.data = self.get_cds_dict(
             psets_vertical_ordering_df, col_names
         )
-        # self.glyph_line.data_source.data = self.get_cds_dict2(
-        #     dissimilarity_np, col_names
-        # )
+        self.glyph_wedge.data_source.data = self.get_cds_dict_wedge(
+            psets_vertical_ordering_df, col_names
+        )
         timer_obj.done()
 
     def generate_figure(self, skewer_params):

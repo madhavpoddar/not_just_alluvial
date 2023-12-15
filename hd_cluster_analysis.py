@@ -29,7 +29,18 @@ drcl_vis = drcl_vis_wrapper(
 # df = read_csv_file("InVS15_8clusters.csv")
 # df = read_csv_file("SFHH_8clusters.csv")
 # col_names = ["time_"+str(i) for i in range(len(df.columns)-2)]
+
+
+# df = read_csv_file("titanic_categorical.csv")
+# col_names = ['Survived', 'Pclass', 'Sex', 'Age', 'SibSp', 'Parch', 'Fare', 'Embarked']
 # drcl_vis = drcl_vis_wrapper(df, col_names)
 
+### Dataset of authors regarding collaborations in publications on Visualization (VIS & predecessors) from 1990-2022 grouped by 5 year intervals.
+### Dataset is filtered from 6600 authors to 36 by only including
+### authors that collaborated in at least 3 of the time intervals (->102) with at least 2 other authors (->36).
+# df = read_csv_file("vispub_filtered_36.csv")
+# df = read_csv_file("vispub_filtered_102.csv")
+# col_names = ['90-95', '95-00', '00-05', '05-10', '10-15', '15-20', '20-22']
+# drcl_vis = drcl_vis_wrapper(df, col_names)
 
 curdoc().add_root(drcl_vis.layout)
