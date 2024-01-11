@@ -36,11 +36,14 @@ drcl_vis = drcl_vis_wrapper(
 # drcl_vis = drcl_vis_wrapper(df, col_names)
 
 ### Dataset of authors regarding collaborations in publications on Visualization (VIS & predecessors) from 1990-2022 grouped by 5 year intervals.
-### Dataset is filtered from 6600 authors to 36 by only including
+### Dataset is filtered from 6600 authors to 36 by only including 
 ### authors that collaborated in at least 3 of the time intervals (->102) with at least 2 other authors (->36).
-# df = read_csv_file("vispub_filtered_36.csv")
 # df = read_csv_file("vispub_filtered_102.csv")
-# col_names = ['90-95', '95-00', '00-05', '05-10', '10-15', '15-20', '20-22']
-# drcl_vis = drcl_vis_wrapper(df, col_names)
+#col_names = ['90-95', '95-00', '00-05', '05-10', '10-15', '15-20', '20-22']
+#df = read_csv_file("vispub_filtered_74.csv")
+#col_names = [str(i) for i in range(2000,2023)]
+df = read_csv_file("vispub_filtered_25.csv")
+col_names = [str(i) for i in range(2010,2023)]
+drcl_vis = drcl_vis_wrapper(df, col_names)
 
 curdoc().add_root(drcl_vis.layout)
