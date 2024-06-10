@@ -220,7 +220,7 @@ class drcl_vis_wrapper:
         # data_space_view_panel = TabPanel(child=l00a, title="Data Space View")
         # l00b_panel = TabPanel(child=l00b, title="Edit Distance based Analysis")
         # Columns (Dis-)similarity based on Cluster-Membership
-        panel_1x1x1_1xn = TabPanel(child=l01a, title="Sequential Comparison")
+        # panel_1x1x1_1xn = TabPanel(child=l01a, title="Sequential Comparison")
         # l01b_panel = TabPanel(child=l01b, title="1xN Comparison")
         panel_nxn_partition = TabPanel(child=l01c, title="NxN Comparison (Partion)")
         panel_nxn_set = TabPanel(
@@ -232,7 +232,7 @@ class drcl_vis_wrapper:
         # Selected Label Colours Interaction
         # l12a_panel = TabPanel(child=l02, title="Labels Overlapping")
 
-        tabs_1x1x1_1xn = Tabs(tabs=[panel_1x1x1_1xn])
+        # tabs_1x1x1_1xn = Tabs(tabs=[panel_1x1x1_1xn])
         tabs_nxn_partition = Tabs(tabs=[panel_nxn_partition])
         tabs_nxn_set = Tabs(tabs=[panel_nxn_set])
         # tabs_l10 = Tabs(tabs=[l10b_panel])
@@ -241,7 +241,7 @@ class drcl_vis_wrapper:
 
         final_layout = row(
             children=[
-                tabs_1x1x1_1xn,
+                l01a,
                 column(children=[tabs_nxn_partition, tabs_nxn_set]),
             ],
             spacing=20,

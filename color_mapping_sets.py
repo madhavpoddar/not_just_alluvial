@@ -1,7 +1,9 @@
 import pandas as pd
 import numpy as np
+import networkx as nx
 from sklearn.manifold import MDS, TSNE
 from sklearn.preprocessing import MinMaxScaler
+from scipy.spatial.distance import pdist, squareform
 from colormath.color_objects import LabColor, sRGBColor
 from colormath.color_conversions import convert_color
 from copy import deepcopy
@@ -57,6 +59,50 @@ def lab_to_rgb(a_star, b_star):
     return hex_color
 
 
+def two_opt(path, distance_matrix):
+    """Improve the path using the 2-opt algorithm."""
+    best_path = path
+    improved = True
+    while improved:
+        improved = False
+        for i in range(1, len(best_path) - 2):
+            for j in range(i + 1, len(best_path) - 1):
+                if j - i == 1:
+                    continue  # Skip adjacent nodes
+                new_path = best_path[:i] + best_path[i:j][::-1] + best_path[j:]
+                if calculate_total_distance(
+                    new_path, distance_matrix
+                ) < calculate_total_distance(best_path, distance_matrix):
+                    best_path = new_path
+                    improved = True
+        path = best_path
+    return best_path
+
+
+def calculate_total_distance(path, distance_matrix):
+    """Calculate the total distance of the TSP path."""
+    total_distance = sum(
+        distance_matrix[path[i], path[i + 1]] for i in range(len(path) - 1)
+    )
+    return total_distance
+
+
+def remove_longest_edge_from_cycle(cycle, dissimilarity_matrix):
+    max_distance = -np.inf
+    max_edge = None
+
+    # Find the longest edge in the cycle
+    for i in range(len(cycle) - 1):
+        distance = dissimilarity_matrix[cycle[i]][cycle[i + 1]]
+        if distance > max_distance:
+            max_distance = distance
+            max_edge = (cycle[i], cycle[i + 1])
+
+    # Remove the longest edge to form a non-cycle path
+    path = cycle[cycle.index(max_edge[1]) :] + cycle[1 : cycle.index(max_edge[0]) + 1]
+    return path
+
+
 def get_setwise_color_allocation(df):
     #####################################################################################################
     # Create a dictionary to store row indexes for each pair of (Column Name, Unique Categorical Value)
@@ -72,6 +118,7 @@ def get_setwise_color_allocation(df):
     # Calculate the dissimilarity matrix (Jaccard index) and based on that the 2D MDS projection of sets
     #####################################################################################################
     dissimilarity_matrix = compute_dissimilarity_matrix(df, row_indexes)
+
     # Compute a 2D projection using MDS
     mds = MDS(
         n_components=2,
@@ -83,8 +130,24 @@ def get_setwise_color_allocation(df):
     )
     projection = mds.fit_transform(dissimilarity_matrix)
 
+    # Calculate the pairwise Euclidean distances in the 2D projection
+    new_dissimilarity_matrix = squareform(pdist(projection, metric="euclidean"))
+
+    # Create a graph from the dissimilarity matrix
+    G = nx.from_numpy_matrix(new_dissimilarity_matrix)
+    # Solve the TSP using the approximate algorithm
+    tsp_path = nx.approximation.traveling_salesman_problem(G, cycle=True)
+    # Improve the initial TSP path using the 2-opt algorithm
+    tsp_path = two_opt(tsp_path, dissimilarity_matrix)
+    # Remove the longest edge to form a non-cycle path
+    tsp_path = remove_longest_edge_from_cycle(tsp_path, new_dissimilarity_matrix)
+
     # Create a DataFrame for the projection data
     projection_df = pd.DataFrame({"x": projection[:, 0], "y": projection[:, 1]})
+    projection_df["tsp_seq"] = projection_df.apply(
+        lambda row: tsp_path.index(row.name), axis=1
+    )
+    print(projection_df)
     projection_df["label"] = list(row_indexes.keys())
     projection_df["partition_col_name"] = projection_df.apply(
         lambda row: row["label"][0], axis=1
@@ -121,7 +184,7 @@ def get_setwise_color_allocation(df):
     for col_name in df.columns:
         projection_df_column = deepcopy(
             projection_df[projection_df["partition_col_name"] == col_name].sort_values(
-                "y"
+                "tsp_seq"
             )
         )
         projection_df_column = projection_df_column.reset_index(drop=True)
