@@ -47,7 +47,7 @@ def set_skewer_params(df, col_names):
     skewer_params["heightspx_dissimilarity_data_table"] = 805
 
     skewer_params["alluvial_y_start"] = -0.1
-    skewer_params["alluvial_y_end"] = 1.23
+    skewer_params["alluvial_y_end"] = 1.03
     skewer_params["pcp_width"] = 0.18
 
     skewer_params["spacing_ratio"] = 0.5

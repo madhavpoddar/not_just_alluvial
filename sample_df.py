@@ -42,13 +42,15 @@ def get_sample_df(which_data: str = "MNIST_DiffDim_KMeans25"):
         # tsne784_2_df = pd.DataFrame(tsne784_2, columns=["tsne784_0", "tsne784_1"])
         # df = pd.concat([df, tsne784_2_df], axis=1)
 
-        n_dim_list = [2] + list(range(4, 785, 60))
+        n_dim_list = [2] + list(range(4, 785, 30))
         # n_dim_list = [2, 3, 4, 5, 48, 49, 50, 51]
         col_names = add_clustering_data(df, n_dim_list, dim_reduced_data)
-        print("col_names")
 
         # add label col
-        col_names.append(label_col_name)
+        df = df.rename({label_col_name: "0"}, axis=1)
+        col_names = ["0"] + (col_names)
+        print(col_names)
+        print(df)
         return df, col_names, None, "n_dim"
 
     elif which_data == "RegularTetrahedron_DBSCANDiffEps":

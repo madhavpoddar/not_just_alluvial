@@ -13,7 +13,7 @@ from df_preprocessing import (
 from draw_vis import (
     alluvial,
     cim,
-    ndimplot,
+    # ndimplot,
     mds_col_similarity_cl_membership,
     mds_nxn_setwise,
     # similarity_roof_shaped_matrix_diagram,
@@ -135,21 +135,25 @@ class drcl_vis_wrapper:
         #     self.col_names,
         #     self.curr_selection,
         # )
-        self.fig_obj["ndimplot"] = ndimplot(
+        # self.fig_obj["ndimplot"] = ndimplot(
+        #     self.df,
+        #     self.skewer_params,
+        #     self.col_names,
+        #     self.curr_selection,
+        # )
+        self.fig_obj["mds_col_similarity_cl_membership"] = (
+            mds_col_similarity_cl_membership(
+                self.skewer_params,
+                self.col_names,
+                1 - calc_FMI_matrix(self.df, self.col_names),
+            )
+        )
+        self.fig_obj["mds_nxn_setwise"] = mds_nxn_setwise(
             self.df,
             self.skewer_params,
             self.col_names,
             self.curr_selection,
-        )
-        self.fig_obj[
-            "mds_col_similarity_cl_membership"
-        ] = mds_col_similarity_cl_membership(
-            self.skewer_params,
-            self.col_names,
-            1 - calc_FMI_matrix(self.df, self.col_names),
-        )
-        self.fig_obj["mds_nxn_setwise"] = mds_nxn_setwise(
-            self.skewer_params, self.col_names, self.psets_vertical_ordering_df
+            self.psets_vertical_ordering_df,
         )
         # self.fig_obj[
         #     "similarity_roof_shaped_matrix_diagram"
@@ -164,9 +168,9 @@ class drcl_vis_wrapper:
         )
         self.fig_obj["alluvial"].p.on_event(Tap, self.tap_callback)
         self.fig_obj["alluvial"].p.on_event(DoubleTap, self.tap_callback)
-        self.fig_obj["ndimplot"].multichoice_cols.on_change(
-            "value", self.ndimplot_multichoice_cols_handler
-        )
+        # self.fig_obj["ndimplot"].multichoice_cols.on_change(
+        #     "value", self.ndimplot_multichoice_cols_handler
+        # )
 
         # TODO: remove this line later
         # self.empty_fig0 = figure(width=800, height=800)
@@ -175,12 +179,12 @@ class drcl_vis_wrapper:
         self.layout = self.generate_layout()
 
     def generate_layout(self):
-        l00a = column(
-            children=[
-                self.fig_obj["ndimplot"].p,
-                self.fig_obj["ndimplot"].multichoice_cols,
-            ]
-        )
+        # l00a = column(
+        #     children=[
+        #         self.fig_obj["ndimplot"].p,
+        #         self.fig_obj["ndimplot"].multichoice_cols,
+        #     ]
+        # )
         # l00b = column(
         #     children=[
         #         self.fig_obj["metamap_edit_dist"].p1,
@@ -189,7 +193,7 @@ class drcl_vis_wrapper:
         # )
         l01a = column(
             children=[
-                self.fig_obj["alluvial"].rbg_edge_alpha_highlight,
+                # self.fig_obj["alluvial"].rbg_edge_alpha_highlight,
                 self.fig_obj["alluvial"].p,
                 self.fig_obj["cim"].p_normal,
                 self.fig_obj["cim"].p_inverted,
@@ -213,13 +217,13 @@ class drcl_vis_wrapper:
         # l02 = self.empty_fig1
 
         # Interative Clustering
-        data_space_view_panel = TabPanel(child=l00a, title="Data Space View")
+        # data_space_view_panel = TabPanel(child=l00a, title="Data Space View")
         # l00b_panel = TabPanel(child=l00b, title="Edit Distance based Analysis")
         # Columns (Dis-)similarity based on Cluster-Membership
         panel_1x1x1_1xn = TabPanel(child=l01a, title="Sequential Comparison")
         # l01b_panel = TabPanel(child=l01b, title="1xN Comparison")
-        panel_nxn = TabPanel(child=l01c, title="NxN Comparison (Partion)")
-        panel_nxn_setwise = TabPanel(
+        panel_nxn_partition = TabPanel(child=l01c, title="NxN Comparison (Partion)")
+        panel_nxn_set = TabPanel(
             child=self.fig_obj["mds_nxn_setwise"].p, title="NxN Comparison (Set)"
         )
         # Cluster Positioning (Estimated??)
@@ -229,8 +233,8 @@ class drcl_vis_wrapper:
         # l12a_panel = TabPanel(child=l02, title="Labels Overlapping")
 
         tabs_1x1x1_1xn = Tabs(tabs=[panel_1x1x1_1xn])
-        tabs_data_space_view = Tabs(tabs=[data_space_view_panel])
-        tabs_nxn = Tabs(tabs=[panel_nxn, panel_nxn_setwise])
+        tabs_nxn_partition = Tabs(tabs=[panel_nxn_partition])
+        tabs_nxn_set = Tabs(tabs=[panel_nxn_set])
         # tabs_l10 = Tabs(tabs=[l10b_panel])
         # tabs_l02 = Tabs(tabs=[l02a_panel, l02b_panel])
         # tabs_l12 = Tabs(tabs=[l12a_panel])
@@ -238,7 +242,7 @@ class drcl_vis_wrapper:
         final_layout = row(
             children=[
                 tabs_1x1x1_1xn,
-                column(children=[tabs_nxn, tabs_data_space_view]),
+                column(children=[tabs_nxn_partition, tabs_nxn_set]),
             ],
             spacing=20,
         )
@@ -261,20 +265,20 @@ class drcl_vis_wrapper:
             self.skewer_params,
         )
 
-    def ndimplot_multichoice_cols_handler(self, attr, old, new):
-        self.curr_selection["ndimplot_col_names"] = [x for x in new]
-        self.fig_obj["ndimplot"].update_selection(
-            self.df_filtered,
-            self.skewer_params,
-            self.col_names,
-            self.curr_selection,
-            self.curr_selection,
-        )
+    # def ndimplot_multichoice_cols_handler(self, attr, old, new):
+    #     self.curr_selection["ndimplot_col_names"] = [x for x in new]
+    #     self.fig_obj["ndimplot"].update_selection(
+    #         self.df_filtered,
+    #         self.skewer_params,
+    #         self.col_names,
+    #         self.curr_selection,
+    #         self.curr_selection,
+    #     )
 
     def rbg_alluvial_edge_alpha_highlight_handler(self, attr, old, new):
-        self.fig_obj[
-            "alluvial"
-        ].alluvial_edges_obj.rbg_edge_alpha_highlight_active = new
+        self.fig_obj["alluvial"].alluvial_edges_obj.rbg_edge_alpha_highlight_active = (
+            new
+        )
         self.fig_obj["alluvial"].alluvial_edges_obj.update_selection(
             self.df,
             self.df_filtered,

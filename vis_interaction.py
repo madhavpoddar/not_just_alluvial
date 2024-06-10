@@ -161,12 +161,20 @@ def selection_update_tap(
         curr_selection,
         old_selection,
     )
+    fig_obj["mds_nxn_setwise"].update_selection(
+        df,
+        df_filtered,
+        skewer_params,
+        col_names,
+        curr_selection,
+        psets_vertical_ordering_df,
+    )
     # fig_obj["metamap_edit_dist"].update_selection(
     #     df_filtered, skewer_params, col_names, curr_selection, old_selection
     # )
-    fig_obj["ndimplot"].update_selection(
-        df_filtered, skewer_params, col_names, curr_selection, old_selection
-    )
+    # fig_obj["ndimplot"].update_selection(
+    #     df_filtered, skewer_params, col_names, curr_selection, old_selection
+    # )
     return df, df_filtered
 
 
