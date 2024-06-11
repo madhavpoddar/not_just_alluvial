@@ -8,7 +8,7 @@ import pandas as pd
 
 from df_preprocessing import (
     reduce_intersections_neighbours,
-    calc_FMI_matrix,
+    calc_ARI_matrix,
 )
 from draw_vis import (
     alluvial,
@@ -145,7 +145,7 @@ class drcl_vis_wrapper:
             mds_col_similarity_cl_membership(
                 self.skewer_params,
                 self.col_names,
-                1 - calc_FMI_matrix(self.df, self.col_names),
+                1 - calc_ARI_matrix(self.df, self.col_names),
             )
         )
         self.fig_obj["mds_nxn_setwise"] = mds_nxn_setwise(
@@ -160,7 +160,7 @@ class drcl_vis_wrapper:
         # ] = similarity_roof_shaped_matrix_diagram(
         #     self.skewer_params,
         #     self.col_names,
-        #     1 - calc_FMI_matrix(self.df, self.col_names),
+        #     1 - calc_ARI_matrix(self.df, self.col_names),
         # )
 
         self.fig_obj["alluvial"].rbg_edge_alpha_highlight.on_change(

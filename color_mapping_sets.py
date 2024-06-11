@@ -147,7 +147,6 @@ def get_setwise_color_allocation(df):
     projection_df["tsp_seq"] = projection_df.apply(
         lambda row: tsp_path.index(row.name), axis=1
     )
-    print(projection_df)
     projection_df["label"] = list(row_indexes.keys())
     projection_df["partition_col_name"] = projection_df.apply(
         lambda row: row["label"][0], axis=1

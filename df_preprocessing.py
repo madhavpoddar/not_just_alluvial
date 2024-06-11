@@ -2,6 +2,7 @@ import numpy as np
 
 from helper_functions_project_specific import get_unique_vals
 from helper_functions_project_specific import get_cluster_count
+from sklearn.metrics import adjusted_rand_score
 
 
 def get_count_0_1(df, col_names):
@@ -88,22 +89,43 @@ def calc_FMI(df, col_name_0, col_name_1, return_type_df=True):
     )
     if return_type_df:
         return df_FMI["FMI"]
+
     return (df_FMI["FMI"] * df_FMI["TP"] / df_FMI["TP"].sum()).sum()
 
 
-def calc_FMI_matrix(df, col_names):
-    FMI_matrix = np.empty(shape=(len(col_names), len(col_names)))
+def calc_ARI(df, col_name_0, col_name_1):
+    if col_name_0 == col_name_1:
+        return 1
+
+    return adjusted_rand_score(df[col_name_0], df[col_name_1])
+
+
+# def calc_FMI_matrix(df, col_names):
+#     FMI_matrix = np.empty(shape=(len(col_names), len(col_names)))
+#     for i, col_name_0 in enumerate(col_names):
+#         for j, col_name_1 in enumerate(col_names):
+#             if i < j:
+#                 FMI_matrix[i][j] = calc_FMI(
+#                     df, col_name_0, col_name_1, return_type_df=False
+#                 )
+#             elif i == j:
+#                 FMI_matrix[i][j] = 1
+#             else:
+#                 FMI_matrix[i][j] = FMI_matrix[j][i]
+#     return FMI_matrix
+
+
+def calc_ARI_matrix(df, col_names):
+    ARI_matrix = np.empty(shape=(len(col_names), len(col_names)))
     for i, col_name_0 in enumerate(col_names):
         for j, col_name_1 in enumerate(col_names):
             if i < j:
-                FMI_matrix[i][j] = calc_FMI(
-                    df, col_name_0, col_name_1, return_type_df=False
-                )
+                ARI_matrix[i][j] = calc_ARI(df, col_name_0, col_name_1)
             elif i == j:
-                FMI_matrix[i][j] = 1
+                ARI_matrix[i][j] = 1
             else:
-                FMI_matrix[i][j] = FMI_matrix[j][i]
-    return FMI_matrix
+                ARI_matrix[i][j] = ARI_matrix[j][i]
+    return ARI_matrix
 
 
 def calc_alluvial_bar_params(df, col_names, spacing_ratio=0.5):
