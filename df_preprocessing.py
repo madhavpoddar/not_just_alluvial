@@ -120,7 +120,7 @@ def calc_ARI_matrix(df, col_names):
     for i, col_name_0 in enumerate(col_names):
         for j, col_name_1 in enumerate(col_names):
             if i < j:
-                ARI_matrix[i][j] = calc_ARI(df, col_name_0, col_name_1)
+                ARI_matrix[i][j] = (calc_ARI(df, col_name_0, col_name_1) + 1) / 2
             elif i == j:
                 ARI_matrix[i][j] = 1
             else:
