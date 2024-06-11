@@ -737,13 +737,15 @@ class alluvial:
                     ]["y_end"].values[0],
                     axis=1,
                 )
-                if curr_selection["color_col_name"] == None:
+                if (
+                    curr_selection["color_col_name"] == None
+                    or curr_selection["color_col_name"] == col_name
+                ):
                     df_cb["fill_color"] = df_cb["line_color"]
-                    df_cb["fill_alpha"] = 0.5
+                    df_cb["fill_alpha"] = 1.0
                 else:
-                    df_cb["fill_color"] = "gray"
-                    df_cb["fill_alpha"] = 0.2
-                # print(df_cb)
+                    df_cb["fill_color"] = None
+                    df_cb["fill_alpha"] = 0.0
                 # if len(df_cb.index) < 2:
                 #     df_cb["bottom"] = 0
                 # else:

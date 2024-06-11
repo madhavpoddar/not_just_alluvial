@@ -3,8 +3,12 @@ from bokeh.models import Tabs, TabPanel
 from bokeh.events import Tap, DoubleTap
 from bokeh.plotting import figure
 import copy
+import os
+import pickle
 
 import pandas as pd
+
+import hashlib
 
 from df_preprocessing import (
     reduce_intersections_neighbours,
@@ -36,6 +40,89 @@ def is_number(s):
         return number  # Return the float if it's not an integer
     except ValueError:
         return None  # Return None if the conversion fails
+
+
+def generate_dataframe_hash(df):
+    # Hash the DataFrame and convert to a string representation
+    hashed_values = pd.util.hash_pandas_object(df).values
+
+    # Convert hashed values to bytes
+    byte_representation = hashed_values.tobytes()
+
+    # Generate a hash code using hashlib
+    hash_code = hashlib.md5(byte_representation).hexdigest()
+
+    return hash_code
+
+
+def is_filename_in_subfolder(filename, subfolder="preprocessing"):
+    # Get the current directory
+    current_dir = os.getcwd()
+
+    # Construct the path to the subfolder
+    subfolder_path = os.path.join(current_dir, subfolder)
+
+    # Check if the subfolder exists
+    if os.path.exists(subfolder_path) and os.path.isdir(subfolder_path):
+        # Check if the filename exists in the subfolder
+        filename_path = os.path.join(subfolder_path, filename)
+        if os.path.exists(filename_path) and os.path.isfile(filename_path):
+            return True
+        else:
+            return False
+    else:
+        return False
+
+
+def pickle_objects(obj1, obj2, filename, subfolder="preprocessing"):
+    # Get the current directory
+    current_dir = os.getcwd()
+
+    # Construct the path to the subfolder
+    subfolder_path = os.path.join(current_dir, subfolder)
+
+    # Create the subfolder if it doesn't exist
+    if not os.path.exists(subfolder_path):
+        os.makedirs(subfolder_path)
+
+    # Construct the full path to the file
+    file_path = os.path.join(subfolder_path, filename)
+
+    # Pickle the objects and write to the file
+    with open(file_path, "wb") as f:
+        pickle.dump((obj1, obj2), f)
+
+    print(f"Preprocessing objects have been pickled and stored in '{file_path}'.")
+
+
+def unpickle_objects(pickle_filename, subfolder="preprocessing"):
+    # Get the current directory
+    current_dir = os.getcwd()
+
+    # Construct the path to the subfolder
+    subfolder_path = os.path.join(current_dir, subfolder)
+
+    # Check if the subfolder exists
+    if not os.path.exists(subfolder_path) or not os.path.isdir(subfolder_path):
+        print(f"Error: Sub-folder '{subfolder}' does not exist.")
+        return None, None
+
+    # Construct the full path to the file
+    file_path = os.path.join(subfolder_path, pickle_filename)
+
+    # Check if the file exists
+    if not os.path.exists(file_path) or not os.path.isfile(file_path):
+        print(
+            f"Error: File '{pickle_filename}' not found in the '{subfolder}' sub-folder."
+        )
+        return None, None
+
+    # Unpickle the objects from the file
+    with open(file_path, "rb") as f:
+        obj1, obj2 = pickle.load(f)
+
+    print(f"The objects have been unpickled from '{file_path}'.")
+    return obj1, obj2
 
 
 class drcl_vis_wrapper:
@@ -97,10 +184,19 @@ class drcl_vis_wrapper:
         ]
         self.curr_selection = set_initial_curr_selection(self.col_names)
 
-        (
-            self.psets_color,
-            self.psets_vertical_ordering_df,
-        ) = get_setwise_color_allocation(self.df[self.col_names])
+        pickle_filename = generate_dataframe_hash(self.df[self.col_names]) + ".pkl"
+        if is_filename_in_subfolder(pickle_filename):
+            self.psets_color, self.psets_vertical_ordering_df = unpickle_objects(
+                pickle_filename
+            )
+        else:
+            (
+                self.psets_color,
+                self.psets_vertical_ordering_df,
+            ) = get_setwise_color_allocation(self.df[self.col_names])
+            pickle_objects(
+                self.psets_color, self.psets_vertical_ordering_df, pickle_filename
+            )
 
         df_assign_colors(
             self.df,
