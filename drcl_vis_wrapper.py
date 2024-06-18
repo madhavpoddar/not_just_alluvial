@@ -132,7 +132,7 @@ class drcl_vis_wrapper:
         col_names,
         col_names_as_list_of_numbers=None,
         sequential_variable_name=None,
-        bool_reduce_intersections_neighbours=False,
+        bool_pickle_preprocessing=True,
     ):
         if sequential_variable_name == None:
             sequential_variable_name = "Sequential Variable"
@@ -159,11 +159,7 @@ class drcl_vis_wrapper:
             {sequential_variable_name: col_names_as_list_of_numbers}, index=col_names
         )
         self.col_names = column_names(col_names)
-
-        if bool_reduce_intersections_neighbours:
-            self.df = reduce_intersections_neighbours(df, self.col_names)
-        else:
-            self.df = df
+        self.df = df
 
         self.skewer_params = set_skewer_params(self.df, self.col_names)
 
@@ -184,19 +180,25 @@ class drcl_vis_wrapper:
         ]
         self.curr_selection = set_initial_curr_selection(self.col_names)
 
-        pickle_filename = generate_dataframe_hash(self.df[self.col_names]) + ".pkl"
-        if is_filename_in_subfolder(pickle_filename):
-            self.psets_color, self.psets_vertical_ordering_df = unpickle_objects(
-                pickle_filename
-            )
+        if bool_pickle_preprocessing:
+            pickle_filename = generate_dataframe_hash(self.df[self.col_names]) + ".pkl"
+            if is_filename_in_subfolder(pickle_filename):
+                self.psets_color, self.psets_vertical_ordering_df = unpickle_objects(
+                    pickle_filename
+                )
+            else:
+                (
+                    self.psets_color,
+                    self.psets_vertical_ordering_df,
+                ) = get_setwise_color_allocation(self.df[self.col_names])
+                pickle_objects(
+                    self.psets_color, self.psets_vertical_ordering_df, pickle_filename
+                )
         else:
             (
                 self.psets_color,
                 self.psets_vertical_ordering_df,
             ) = get_setwise_color_allocation(self.df[self.col_names])
-            pickle_objects(
-                self.psets_color, self.psets_vertical_ordering_df, pickle_filename
-            )
 
         df_assign_colors(
             self.df,

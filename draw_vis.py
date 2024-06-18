@@ -1385,8 +1385,8 @@ class cim:
                 top="top",
                 bottom="bottom",
                 line_color=None,
-                fill_color="gray",
-                fill_alpha=0.3,
+                fill_color="darkgray",
+                fill_alpha=1,
             )
             self.update_selection(
                 df,
@@ -1623,8 +1623,8 @@ class cim:
                 top="top",
                 bottom="bottom",
                 line_width=0,
-                fill_color="gray",
-                fill_alpha=0.3,
+                fill_color="darkgray",
+                fill_alpha=1,
             )
             self.update_selection(
                 df,

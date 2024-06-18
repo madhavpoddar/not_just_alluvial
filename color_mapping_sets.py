@@ -99,7 +99,12 @@ def remove_longest_edge_from_cycle(cycle, dissimilarity_matrix):
             max_edge = (cycle[i], cycle[i + 1])
 
     # Remove the longest edge to form a non-cycle path
-    path = cycle[cycle.index(max_edge[1]) :] + cycle[1 : cycle.index(max_edge[0]) + 1]
+    if max_edge[1] == (len(cycle) - 1):
+        path = cycle[: len(cycle) - 1]
+    else:
+        path = (
+            cycle[cycle.index(max_edge[1]) :] + cycle[1 : cycle.index(max_edge[0]) + 1]
+        )
     return path
 
 
