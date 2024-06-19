@@ -1161,7 +1161,7 @@ class alluvial:
                 # for eg. ("{:.1E}".format(val) if len(str(val)) >= 5 else str(val))
                 df["text"] = df["col_names"]
                 df["text_font_size"] = df.apply(
-                    lambda row: "7pt" if len(row["text"]) > 3 else "10pt",
+                    lambda row: "12pt" if len(row["text"]) > 3 else "12pt",
                     axis=1,
                 )
                 df["text_color"] = df.apply(
