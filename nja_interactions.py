@@ -1,15 +1,10 @@
 import copy
-from helper_functions_project_specific import get_unique_vals
-from vis_params import color_palette
-from helper_functions_generic import timer
 
 
 def set_initial_curr_selection(col_names):
     return {
-        "color_col_name": col_names[0],  # [col_names[0]],
+        "color_col_name": None,  # col_names[0]
         "cluster_ids": [],
-        "ndimplot_col_names": [],
-        # "scatterplot_col_names": {"x": "pca_0", "y": "pca_1"},
     }
 
 
@@ -84,22 +79,6 @@ def df_assign_colors(
     if remove_colors:
         df.loc[:, color_col_name] = "gray"
     else:
-        # unique_vals = get_unique_vals(df, selected_partition_col_name)
-        # print(psets_color)
-        # for unique_val in unique_vals:
-        #     print(
-        #         psets_color[
-        #             (selected_partition_col_name, unique_val)
-        #         ]
-        #     )
-        # colors = color_palette(min(len(unique_vals), 256))
-        # df[color_col_name] = df.apply(
-        #     lambda row: colors[
-        #         unique_vals.index(row[selected_partition_col_name]) % 256
-        #     ],
-        #     axis=1,
-        # )
-
         df[color_col_name] = df.apply(
             lambda row: psets_color[
                 (selected_partition_col_name, row[selected_partition_col_name])
@@ -152,7 +131,7 @@ def selection_update_tap(
         curr_selection,
         old_selection,
     )
-    fig_obj["cim"].update_selection(
+    fig_obj["ixn_merge_split"].update_selection(
         df,
         df_filtered,
         skewer_params,
@@ -161,7 +140,7 @@ def selection_update_tap(
         curr_selection,
         old_selection,
     )
-    fig_obj["mds_nxn_setwise"].update_selection(
+    fig_obj["nxn_sets"].update_selection(
         df,
         df_filtered,
         skewer_params,

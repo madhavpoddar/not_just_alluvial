@@ -1,15 +1,119 @@
 import pandas as pd
 import numpy as np
 import networkx as nx
-from sklearn.manifold import MDS, TSNE
+import os
+import pickle
+import hashlib
+
+from sklearn.manifold import MDS
 from sklearn.preprocessing import MinMaxScaler
+from sklearn.metrics import adjusted_rand_score
 from scipy.spatial.distance import pdist, squareform
 from colormath.color_objects import LabColor, sRGBColor
 from colormath.color_conversions import convert_color
 from copy import deepcopy
 
-# from bokeh.plotting import figure, show
-# from bokeh.models import ColumnDataSource
+
+def generate_dataframe_hash(df):
+    # Hash the DataFrame and convert to a string representation
+    hashed_values = pd.util.hash_pandas_object(df).values
+
+    # Convert hashed values to bytes
+    byte_representation = hashed_values.tobytes()
+
+    # Generate a hash code using hashlib
+    hash_code = hashlib.md5(byte_representation).hexdigest()
+
+    return hash_code
+
+
+def is_filename_in_subfolder(filename, subfolder="preprocessing"):
+    # Get the current directory
+    current_dir = os.getcwd()
+
+    # Construct the path to the subfolder
+    subfolder_path = os.path.join(current_dir, subfolder)
+
+    # Check if the subfolder exists
+    if os.path.exists(subfolder_path) and os.path.isdir(subfolder_path):
+        # Check if the filename exists in the subfolder
+        filename_path = os.path.join(subfolder_path, filename)
+        if os.path.exists(filename_path) and os.path.isfile(filename_path):
+            return True
+        else:
+            return False
+    else:
+        return False
+
+
+def pickle_objects(obj1, obj2, filename, subfolder="preprocessing"):
+    # Get the current directory
+    current_dir = os.getcwd()
+
+    # Construct the path to the subfolder
+    subfolder_path = os.path.join(current_dir, subfolder)
+
+    # Create the subfolder if it doesn't exist
+    if not os.path.exists(subfolder_path):
+        os.makedirs(subfolder_path)
+
+    # Construct the full path to the file
+    file_path = os.path.join(subfolder_path, filename)
+
+    # Pickle the objects and write to the file
+    with open(file_path, "wb") as f:
+        pickle.dump((obj1, obj2), f)
+
+    print(f"Preprocessing objects have been pickled and stored in '{file_path}'.")
+
+
+def unpickle_objects(pickle_filename, subfolder="preprocessing"):
+    # Get the current directory
+    current_dir = os.getcwd()
+
+    # Construct the path to the subfolder
+    subfolder_path = os.path.join(current_dir, subfolder)
+
+    # Check if the subfolder exists
+    if not os.path.exists(subfolder_path) or not os.path.isdir(subfolder_path):
+        print(f"Error: Sub-folder '{subfolder}' does not exist.")
+        return None, None
+
+    # Construct the full path to the file
+    file_path = os.path.join(subfolder_path, pickle_filename)
+
+    # Check if the file exists
+    if not os.path.exists(file_path) or not os.path.isfile(file_path):
+        print(
+            f"Error: File '{pickle_filename}' not found in the '{subfolder}' sub-folder."
+        )
+        return None, None
+
+    # Unpickle the objects from the file
+    with open(file_path, "rb") as f:
+        obj1, obj2 = pickle.load(f)
+
+    print(f"The objects have been unpickled from '{file_path}'.")
+    return obj1, obj2
+
+
+def calc_ARI(df, col_name_0, col_name_1):
+    if col_name_0 == col_name_1:
+        return 1
+    return adjusted_rand_score(df[col_name_0], df[col_name_1])
+
+
+def calc_ARI_matrix(df, col_names):
+    ARI_matrix = np.empty(shape=(len(col_names), len(col_names)))
+    for i, col_name_0 in enumerate(col_names):
+        for j, col_name_1 in enumerate(col_names):
+            if i < j:
+                ARI_matrix[i][j] = (calc_ARI(df, col_name_0, col_name_1) + 1) / 2
+            elif i == j:
+                ARI_matrix[i][j] = 1
+            else:
+                ARI_matrix[i][j] = ARI_matrix[j][i]
+    return ARI_matrix
 
 
 def calculate_dissimilarity(row_indexes, pair1, pair2):
@@ -108,16 +212,16 @@ def remove_longest_edge_from_cycle(cycle, dissimilarity_matrix):
     return path
 
 
-def get_setwise_color_allocation(df):
+def calc_sets_colors_2d_positions(df):
     #####################################################################################################
-    # Create a dictionary to store row indexes for each pair of (Column Name, Unique Categorical Value)
+    # Create a dictionary to store row indexes that belong to a particular set
     #####################################################################################################
     row_indexes = {}
     # Iterate through the columns and unique values
     for col_name in df.columns:
-        for unique_value in df[col_name].unique():
-            key = (col_name, unique_value)
-            row_indexes[key] = df[df[col_name] == unique_value].index.tolist()
+        for set_id in df[col_name].unique():
+            key = (col_name, set_id)
+            row_indexes[key] = df[df[col_name] == set_id].index.tolist()
 
     #####################################################################################################
     # Calculate the dissimilarity matrix (Jaccard index) and based on that the 2D MDS projection of sets
@@ -138,6 +242,9 @@ def get_setwise_color_allocation(df):
     # Calculate the pairwise Euclidean distances in the 2D projection
     new_dissimilarity_matrix = squareform(pdist(projection, metric="euclidean"))
 
+    #####################################################################################################
+    # Solving for Travelling Salesman for vertical sequencing of sets within individual partitions
+    #####################################################################################################
     # Create a graph from the dissimilarity matrix
     G = nx.from_numpy_matrix(new_dissimilarity_matrix)
     # Solve the TSP using the approximate algorithm
@@ -147,7 +254,10 @@ def get_setwise_color_allocation(df):
     # Remove the longest edge to form a non-cycle path
     tsp_path = remove_longest_edge_from_cycle(tsp_path, new_dissimilarity_matrix)
 
-    # Create a DataFrame for the projection data
+    #####################################################################################################
+    # Create a DataFrame for the position/vertical ordering
+    #####################################################################################################
+
     projection_df = pd.DataFrame({"x": projection[:, 0], "y": projection[:, 1]})
     projection_df["tsp_seq"] = projection_df.apply(
         lambda row: tsp_path.index(row.name), axis=1
@@ -161,26 +271,8 @@ def get_setwise_color_allocation(df):
     )
 
     #####################################################################################################
-    # 1D MDS projection of sets for sequencing of sets within individual partitions
+    # Calculating the positions of bars in Alluvial Diagram
     #####################################################################################################
-    # # Compute a 1D projection using MDS
-    # mds = MDS(
-    #     n_components=1,
-    #     dissimilarity="precomputed",
-    #     random_state=19,
-    #     normalized_stress="auto",
-    # )
-    # projection = mds.fit_transform(dissimilarity_matrix)
-    # tsne = TSNE(n_components=1, random_state=19)
-    # projection = tsne.fit_transform(projection)
-
-    # # Create a PCA instance with one component
-    # pca = PCA(n_components=1)
-    # # Fit the PCA on the MDS projection
-    # pca_component = pca.fit_transform(projection)
-
-    # # Add the projection data to the projection df
-    # projection_df["1D_proj"] = projection[:, 0]
 
     spacing_ratio = 0.5
     width_per_count = (1 - spacing_ratio) / len(df.index)
