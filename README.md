@@ -1,6 +1,6 @@
 # Not Just Alluvial
 
-![Not Just Alluvial - Teaser Figure](teaser.PNG "Illustrating Not Just Alluvial by depicting different clustering results obtained by varying the number of clusters in k-means.")
+![Illustrating Not Just Alluvial by depicting different clustering results obtained by varying the number of clusters in k-means.](teaser.PNG "Not Just Alluvial - Teaser Figure")
 
 This multi-view visual analytics system is used analyze changes in partition sequences. It is an prototype implementation of an approach described in the following research paper:
 
@@ -15,7 +15,6 @@ Prerequisites: conda needs to be installed.
 To run the application simply clone the repository, go to the main project folder and start with the following commands:
 
 <code>
-
 conda env create --name nja --file=nja_env.yml
 
 conda activate nja
@@ -27,7 +26,6 @@ This will create the conda environment and activate it.
 Next, to run the code: 
 
 <code>
-
 bokeh serve --show nja.py
 
 </code>
@@ -35,7 +33,6 @@ bokeh serve --show nja.py
 If you want to visualize a different sample dataset or provide a different dataset, please make modifications in the file "nja.py". If you provide your own dataset and it is large (with respect to number of sets), please run the following two commands instead (to avoid server timeout issues):
 
 <code>
-
 python nja.py
 
 bokeh serve --show nja.py
