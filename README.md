@@ -14,30 +14,25 @@ Prerequisites: conda needs to be installed.
 
 To run the application simply clone the repository, go to the main project folder and start with the following commands:
 
-<code>
+```cmd
 conda env create --name nja --file=nja_env.yml
-
 conda activate nja
-
-</code>
+```
 
 This will create the conda environment and activate it.
 
 Next, to run the code: 
 
-<code>
+```cmd
 bokeh serve --show nja.py
-
-</code>
+```
 
 If you want to visualize a different sample dataset or provide a different dataset, please make modifications in the file "nja.py". If you provide your own dataset and it is large (with respect to number of sets), please run the following two commands instead (to avoid server timeout issues):
 
-<code>
+```cmd
 python nja.py
-
 bokeh serve --show nja.py
-
-</code>
+```
 
 ## Project structure
 
