@@ -1,10 +1,14 @@
+# Not Just Alluvial
+
+![Not Just Alluvial - Teaser Figure](teaser.PNG "Illustrating Not Just Alluvial by depicting different clustering results obtained by varying the number of clusters in k-means.")
+
 This multi-view visual analytics system is used analyze changes in partition sequences. It is an prototype implementation of an approach described in the following research paper:
 
-Not Just Alluvial: Towards a More Comprehensive Visual Analysis of Data Partition Sequences. Madhav Poddar, Jan-Tobias Sohns, and Fabian Beck. Vision, Modeling, and Visualization 2024.
+*Not Just Alluvial: Towards a More Comprehensive Visual Analysis of Data Partition Sequences*. Madhav Poddar, Jan-Tobias Sohns, and Fabian Beck. Vision, Modeling, and Visualization 2024.
 
 The Not Just Alluvial (NJA) prototype was developed using the [Bokeh library](https://bokeh.pydata.org/en/latest/) in Python.
 
-# Running the tool
+## Running the tool
 
 Prerequisites: conda needs to be installed.
 
@@ -38,7 +42,7 @@ bokeh serve --show nja.py
 
 </code>
 
-# Project structure
+## Project structure
 
 | Source File Name         | Description                                                                                    |
 |--------------------------|------------------------------------------------------------------------------------------------|
